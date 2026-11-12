@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\TwoFactorAuthenticatedSessionController;
+use App\Http\Controllers\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +23,18 @@ Route::middleware('guest')->group(function () {
         ->name('login');
 
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
+
+    Route::get('two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'create'])
+        ->name('two-factor.login');
+
+    Route::post('two-factor-challenge', [TwoFactorAuthenticatedSessionController::class, 'store'])
+        ->name('two-factor.login.store');
+
+    Route::post('two-factor-challenge/recovery-email', [TwoFactorAuthenticatedSessionController::class, 'sendEmailRecovery'])
+        ->name('two-factor.recovery.email.send');
+
+    Route::post('two-factor-challenge/recovery-verify', [TwoFactorAuthenticatedSessionController::class, 'verifyEmailRecovery'])
+        ->name('two-factor.recovery.email.verify');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -53,6 +67,15 @@ Route::middleware('auth')->group(function () {
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+
+    Route::post('profile/two-factor', [TwoFactorAuthenticationController::class, 'store'])
+        ->name('profile.two-factor.store');
+
+    Route::post('profile/two-factor/confirm', [TwoFactorAuthenticationController::class, 'confirm'])
+        ->name('profile.two-factor.confirm');
+
+    Route::delete('profile/two-factor', [TwoFactorAuthenticationController::class, 'destroy'])
+        ->name('profile.two-factor.destroy');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

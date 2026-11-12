@@ -1,8 +1,7 @@
 <div class="space-y-6">
-    <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
             <a href="{{ route('orders.index') }}" wire:navigate class="text-sm font-medium text-blue-700 dark:text-blue-300 print:hidden">&larr; All orders</a>
-            <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-gray-100">Order {{ $order->order_number }}</h1>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">Placed {{ $order->created_at?->format('M j, Y g:i A') }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 print:hidden">
@@ -95,8 +94,8 @@
                                 Send <span class="font-semibold">{{ $order->money($order->total) }}</span>
                                 to Lipa number <span class="font-mono font-semibold">{{ $lipaAccount['number'] }}</span>@if ($lipaAccount['business_name'] !== '') as {{ $lipaAccount['business_name'] }}@endif.
                             </p>
-                            @if ($lipaAccount['instructions'] !== '')
-                                <p class="text-sm text-amber-900/90 dark:text-amber-100/90">{{ $lipaAccount['instructions'] }}</p>
+                            @if (\App\Support\RichText::plainText($lipaAccount['instructions']) !== '')
+                                <div class="sf-rich-text sf-rich-text--compact text-sm text-amber-900/90 dark:text-amber-100/90">{!! \App\Support\RichText::toHtml($lipaAccount['instructions']) !!}</div>
                             @endif
                         @else
                             <p class="text-sm text-amber-900 dark:text-amber-100">

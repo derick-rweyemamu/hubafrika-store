@@ -4,11 +4,12 @@ namespace App\Livewire\Admin;
 
 use App\Livewire\Concerns\PicksLibraryMedia;
 use App\Models\Category;
+use App\Models\Product;
+use App\Support\RichText;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -19,6 +20,11 @@ class Categories extends Component
 {
     use PicksLibraryMedia, WithFileUploads, WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('categories.view'), 403);
+    }
+
     public string $search = '';
 
     public int $perPage = 10;
@@ -28,6 +34,10 @@ class Categories extends Component
     public ?int $categoryId = null;
 
     public string $name = '';
+
+    public string $slug = '';
+
+    public string $description = '';
 
     public string $parentId = '';
 
@@ -53,14 +63,30 @@ class Categories extends Component
 
     public ?string $currentCoverImage = null;
 
+    public ?string $deleteError = null;
+
     public function updatingSearch(): void
     {
+        $this->deleteError = null;
         $this->resetPage();
+    }
+
+    public function dismissDeleteError(): void
+    {
+        $this->deleteError = null;
+    }
+
+    public function updatedName(string $name): void
+    {
+        $this->slug = trim($name) === ''
+            ? ''
+            : Category::generateUniqueSlug($name, $this->categoryId);
     }
 
     public function create(): void
     {
         $this->authorizeAdmin();
+        $this->deleteError = null;
         $this->resetValidation();
         $this->resetForm();
         $this->isOpen = true;
@@ -69,11 +95,14 @@ class Categories extends Component
     public function edit(int $id): void
     {
         $this->authorizeAdmin();
+        $this->deleteError = null;
         $this->resetValidation();
 
         $category = Category::query()->findOrFail($id);
         $this->categoryId = $category->id;
         $this->name = $category->name;
+        $this->slug = (string) ($category->slug ?? '');
+        $this->description = (string) ($category->description ?? '');
         $this->parentId = (string) ($category->parent_id ?: '');
         $this->orderLevel = (string) $category->order_level;
         $this->discount = (string) $category->discount;
@@ -96,6 +125,7 @@ class Categories extends Component
 
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:50'],
+            'description' => ['nullable', 'string', 'max:60000'],
             'parentId' => ['nullable', 'integer', 'exists:categories,id'],
             'orderLevel' => ['required', 'integer', 'min:0'],
             'discount' => ['required', 'numeric', 'between:0,100'],
@@ -132,9 +162,12 @@ class Categories extends Component
         ]);
 
         DB::transaction(function () use ($category, $validated, $parentId, $parent): void {
+            $description = RichText::sanitize($validated['description'] ?? null);
+
             $category->fill([
                 'name' => $validated['name'],
-                'slug' => $this->uniqueSlug($validated['name'], $category->exists ? $category->id : null),
+                'slug' => Category::generateUniqueSlug($validated['name'], $category->exists ? $category->id : null),
+                'description' => $description,
                 'parent_id' => $parentId,
                 'level' => $parent === null ? 0 : $parent->level + 1,
                 'order_level' => $validated['orderLevel'],
@@ -149,6 +182,7 @@ class Categories extends Component
 
         $this->storeUploadedImages($category, $legacyImages);
 
+        $this->deleteError = null;
         session()->flash('message', $this->categoryId === null
             ? 'Category created successfully.'
             : 'Category updated successfully.');
@@ -159,14 +193,16 @@ class Categories extends Component
     public function delete(int $id): void
     {
         $this->authorizeAdmin();
+        $this->deleteError = null;
 
         $category = Category::query()->findOrFail($id);
+        $blockingProductIds = $this->blockingProductIds($category->id);
+        $childrenCount = $category->children()->count();
 
-        $hasPivotProducts = Schema::hasTable('product_categories')
-            && DB::table('product_categories')->where('category_id', $category->id)->exists();
-
-        if ($category->products()->exists() || $category->children()->exists() || $hasPivotProducts) {
-            session()->flash('error', 'This category cannot be deleted while it has products or subcategories.');
+        if ($blockingProductIds !== [] || $childrenCount > 0) {
+            $message = $this->formatDeletionBlockedMessage($category, $blockingProductIds, $childrenCount);
+            $this->deleteError = $message;
+            session()->flash('error', $message);
 
             return;
         }
@@ -184,17 +220,126 @@ class Categories extends Component
     public function render()
     {
         $perPage = in_array($this->perPage, [10, 25, 50], true) ? $this->perPage : 10;
+        $categories = Category::query()
+            ->with('parent')
+            ->withCount(['products', 'children'])
+            ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.mb_substr($this->search, 0, 100).'%'))
+            ->orderBy('order_level')
+            ->orderBy('name')
+            ->paginate($perPage);
 
         return view('livewire.admin.categories', [
-            'categories' => Category::query()
-                ->with('parent')
-                ->withCount(['products', 'children'])
-                ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.mb_substr($this->search, 0, 100).'%'))
-                ->orderBy('order_level')
-                ->orderBy('name')
-                ->paginate($perPage),
+            'categories' => $categories,
+            'blockingProductCounts' => $this->blockingProductCounts($categories->pluck('id')->all()),
             'parentOptions' => Category::query()->orderBy('name')->get(),
         ])->layout('components.layouts.admin', ['title' => 'Categories']);
+    }
+
+    /**
+     * Collect distinct product IDs blocking category deletion across both the
+     * primary category column and the additional-categories pivot table.
+     *
+     * @return array<int, int>
+     */
+    private function blockingProductIds(int $categoryId): array
+    {
+        $ids = Product::query()
+            ->where('category_id', $categoryId)
+            ->pluck('id')
+            ->map(static fn (int|string $id): int => (int) $id)
+            ->all();
+
+        if (Schema::hasTable('product_categories')) {
+            $pivotIds = DB::table('product_categories')
+                ->where('category_id', $categoryId)
+                ->pluck('product_id')
+                ->map(static fn (int|string $id): int => (int) $id)
+                ->all();
+
+            $ids = array_values(array_unique([...$ids, ...$pivotIds]));
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Compute distinct product counts per category ID, including additional
+     * pivot assignments alongside primary `category_id` links.
+     *
+     * @param  array<int, int>  $categoryIds
+     * @return array<int, int>
+     */
+    private function blockingProductCounts(array $categoryIds): array
+    {
+        if ($categoryIds === []) {
+            return [];
+        }
+
+        /** @var array<int, array<int, true>> $map */
+        $map = [];
+
+        $directRows = Product::query()
+            ->whereIn('category_id', $categoryIds)
+            ->get(['id', 'category_id']);
+
+        foreach ($directRows as $row) {
+            if ($row->category_id !== null) {
+                $map[(int) $row->category_id][(int) $row->id] = true;
+            }
+        }
+
+        if (Schema::hasTable('product_categories')) {
+            $pivotRows = DB::table('product_categories')
+                ->whereIn('category_id', $categoryIds)
+                ->get(['category_id', 'product_id']);
+
+            foreach ($pivotRows as $row) {
+                $map[(int) $row->category_id][(int) $row->product_id] = true;
+            }
+        }
+
+        $counts = [];
+        foreach ($categoryIds as $categoryId) {
+            $counts[(int) $categoryId] = count($map[(int) $categoryId] ?? []);
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  array<int, int>  $blockingProductIds
+     */
+    private function formatDeletionBlockedMessage(Category $category, array $blockingProductIds, int $childrenCount): string
+    {
+        $productCount = count($blockingProductIds);
+        $productNames = $productCount > 0
+            ? Product::query()->whereIn('id', $blockingProductIds)->orderBy('name')->limit(3)->pluck('name')->all()
+            : [];
+        $childNames = $childrenCount > 0
+            ? $category->children()->orderBy('name')->limit(3)->pluck('name')->all()
+            : [];
+
+        $parts = [];
+
+        if ($productCount > 0) {
+            $productSummary = implode(', ', $productNames);
+            if ($productCount > count($productNames)) {
+                $productSummary .= ', and '.($productCount - count($productNames)).' more';
+            }
+            $label = $productCount === 1 ? '1 product' : $productCount.' products';
+            $parts[] = $label.($productSummary !== '' ? ' ('.$productSummary.')' : '');
+        }
+
+        if ($childrenCount > 0) {
+            $childSummary = implode(', ', $childNames);
+            if ($childrenCount > count($childNames)) {
+                $childSummary .= ', and '.($childrenCount - count($childNames)).' more';
+            }
+            $label = $childrenCount === 1 ? '1 subcategory' : $childrenCount.' subcategories';
+            $parts[] = $label.($childSummary !== '' ? ' ('.$childSummary.')' : '');
+        }
+
+        return 'Category '.$category->name.' cannot be deleted while it still has '.implode(' and ', $parts).'. Reassign or remove them first.';
     }
 
     private function resetForm(): void
@@ -202,6 +347,8 @@ class Categories extends Component
         $this->reset([
             'categoryId',
             'name',
+            'slug',
+            'description',
             'parentId',
             'orderLevel',
             'discount',
@@ -264,22 +411,6 @@ class Categories extends Component
             $child->save();
             $this->syncDescendantLevels($child, $visitedIds);
         }
-    }
-
-    private function uniqueSlug(string $name, ?int $ignoreId): string
-    {
-        $baseSlug = Str::slug($name) ?: 'category';
-        $slug = $baseSlug;
-        $suffix = 2;
-
-        while (Category::query()
-            ->where('slug', $slug)
-            ->when($ignoreId !== null, fn (Builder $query) => $query->where('id', '!=', $ignoreId))
-            ->exists()) {
-            $slug = $baseSlug.'-'.$suffix++;
-        }
-
-        return $slug;
     }
 
     /**

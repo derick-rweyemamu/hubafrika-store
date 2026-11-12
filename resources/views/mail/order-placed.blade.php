@@ -19,8 +19,8 @@ We received order **{{ $order->order_number }}**. This email is your confirmatio
 
 Send **{{ $order->money($order->total) }}** to Lipa number **{{ $lipaNumber }}**@if ($lipaBusinessName !== '') ({{ $lipaBusinessName }})@endif.
 
-@if ($lipaInstructions !== '')
-{{ $lipaInstructions }}
+@if (\App\Support\RichText::plainText($lipaInstructions) !== '')
+{!! \App\Support\RichText::toHtml($lipaInstructions) !!}
 @endif
 
 @if ($order->payment_reference)

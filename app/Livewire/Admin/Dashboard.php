@@ -20,6 +20,16 @@ class Dashboard extends Component
     /** Days of history the sales chart shows until the viewer picks another range. */
     public int $trendDays = 14;
 
+    public function boot(): void
+    {
+        $user = auth()->user();
+
+        abort_unless(
+            $user !== null && ($user->isAdmin() || $user->getAllPermissions()->isNotEmpty()),
+            403,
+        );
+    }
+
     /** Stock level that marks a product as running low when it sets no alert of its own. */
     private const LOW_STOCK_THRESHOLD = 5;
 
@@ -39,7 +49,9 @@ class Dashboard extends Component
         $abilities = [
             'orders' => (bool) auth()->user()?->can('orders.view'),
             'products' => (bool) auth()->user()?->can('products.view'),
+            'products_manage' => (bool) auth()->user()?->can('products.manage'),
             'inventory' => (bool) auth()->user()?->can('inventory.view'),
+            'inventory_manage' => (bool) auth()->user()?->can('inventory.manage'),
             'customers' => (bool) auth()->user()?->can('customers.view'),
             'settings' => (bool) auth()->user()?->can('settings.view'),
             'cms' => (bool) auth()->user()?->can('cms.manage'),
@@ -55,8 +67,12 @@ class Dashboard extends Component
             ? $this->salesMetrics($windowStart, $previousStart, $previousEnd)
             : null;
 
-        $customers = $this->customerMetrics($windowStart, $previousStart, $previousEnd);
-        $catalog = $this->catalogMetrics();
+        $customers = $abilities['customers']
+            ? $this->customerMetrics($windowStart, $previousStart, $previousEnd)
+            : null;
+        $catalog = ($abilities['products'] || $abilities['inventory'])
+            ? $this->catalogMetrics()
+            : null;
         $pipeline = $abilities['orders']
             ? $this->pipelineMetrics()
             : ['total' => 0, 'rows' => []];
@@ -66,7 +82,9 @@ class Dashboard extends Component
             'awaiting_payments' => $abilities['orders']
                 ? Order::query()->where('payment_status', 'awaiting_verification')->count()
                 : 0,
-            'low_stock' => $catalog['low_stock_count'],
+            'low_stock' => $abilities['inventory']
+                ? ($catalog['low_stock_count'] ?? 0)
+                : 0,
         ];
 
         $currency = $this->storeCurrency();

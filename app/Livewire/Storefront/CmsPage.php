@@ -4,8 +4,10 @@ namespace App\Livewire\Storefront;
 
 use App\Models\CmsPage as Page;
 use App\Models\CmsPost as Post;
+use App\Support\Storefront\PageBlocks;
 use App\Support\Storefront\Palette;
 use App\Support\Storefront\ProductGrid;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -35,9 +37,6 @@ class CmsPage extends Component
             ? str_contains($data['html'], 'data-hubafrika-products')
             : collect($data['blocks'])->where('type', 'product_grid')->isNotEmpty();
         $currency = $hasProductGrid ? ProductGrid::currency() : '';
-        // The page document is its own CSS island, so the theme colour the
-        // cards print is handed to it as a custom property.
-        $primary = $hasProductGrid ? Palette::primary() : '';
         // Legacy canvas pages carry no block settings, so they list the newest
         // products with the default limit.
         $productBlocks = $hasProductGrid && ! $isVisualBuilderPage
@@ -48,22 +47,7 @@ class CmsPage extends Component
         $builderDocument = null;
 
         if ($isVisualBuilderPage) {
-            $nonce = Str::random(32);
-            $contentSecurityPolicy = "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline' https:; img-src https: http: data:; font-src https: data:; connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'";
-            $resizeScript = '<script nonce="'.$nonce.'">'
-                .'const reportPageHeight=()=>window.parent.postMessage({type:"hubafrika-cms-resize",height:Math.ceil(document.documentElement.scrollHeight)},"*");'
-                .'document.addEventListener("click",event=>{const link=event.target instanceof Element?event.target.closest("a[href]"):null;if(!link)return;const url=new URL(link.href,window.location.href);if(!["http:","https:"].includes(url.protocol))return;event.preventDefault();window.parent.postMessage({type:"hubafrika-cms-navigate",href:url.href},"*")});'
-                .'new ResizeObserver(reportPageHeight).observe(document.documentElement);'
-                .'window.addEventListener("load",reportPageHeight);reportPageHeight();'
-                .'</script>';
-            $builderDocument = '<!doctype html><html lang="en"><head>'
-                .'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-                .'<meta http-equiv="Content-Security-Policy" content="'.e($contentSecurityPolicy).'">'
-                .'<style>html{scroll-behavior:smooth}body{margin:0;font-family:Arial,sans-serif}</style>'
-                .'<style>'.$data['css'].'</style></head>'
-                .($primary === '' ? '<body>' : '<body style="--storefront-primary:'.e($primary).'">')
-                .ProductGrid::render($data['html'], $currency)
-                .$resizeScript.'</body></html>';
+            $builderDocument = $this->builderDocument($data['html'], $data['css'] ?? '', $currency, $page->title);
         }
 
         return view('livewire.storefront.cms-page', [
@@ -73,6 +57,50 @@ class CmsPage extends Component
             'currency' => $currency,
             'pageHeight' => max(900, $pageHeight + 40),
             'builderDocument' => $builderDocument,
-        ])->layout('components.layouts.storefront', ['title' => $page->title]);
+        ])->layout('components.layouts.storefront', ['title' => $page->title, 'fullWidth' => $isVisualBuilderPage]);
+    }
+
+    /**
+     * The sandboxed document a visual-builder page is shown in.
+     *
+     * The document is its own CSS island, so it loads the same stylesheet the
+     * builder canvas uses and receives the storefront palette and body font as
+     * custom properties.
+     */
+    protected function builderDocument(string $html, string $css, string $currency, string $pageTitle = ''): string
+    {
+        $nonce = Str::random(32);
+        $stylesheet = Vite::asset('resources/css/app.css');
+        $assetOrigin = parse_url($stylesheet, PHP_URL_SCHEME).'://'.parse_url($stylesheet, PHP_URL_HOST)
+            .(parse_url($stylesheet, PHP_URL_PORT) ? ':'.parse_url($stylesheet, PHP_URL_PORT) : '');
+        $palette = Palette::frontend();
+        $bodyStyle = collect([
+            '--storefront-primary' => $palette['primary'],
+            '--storefront-secondary' => $palette['secondary'],
+            '--storefront-accent' => $palette['accent'],
+            '--storefront-bg' => $palette['bg'],
+            '--storefront-surface' => $palette['surface'],
+            '--storefront-text' => $palette['text'],
+        ])->map(fn (string $value, string $name): string => $name.':'.$value)->implode(';');
+        $contentSecurityPolicy = "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline' https: {$assetOrigin}; img-src https: http: data:; font-src https: data:; connect-src 'none'; form-action 'none'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'none'";
+        $resizeScript = '<script nonce="'.$nonce.'">'
+            .'const reportPageHeight=()=>window.parent.postMessage({type:"hubafrika-cms-resize",height:Math.ceil(document.documentElement.scrollHeight)},"*");'
+            .'document.addEventListener("click",event=>{const link=event.target instanceof Element?event.target.closest("a[href]"):null;if(!link)return;const url=new URL(link.href,window.location.href);if(!["http:","https:"].includes(url.protocol))return;event.preventDefault();window.parent.postMessage({type:"hubafrika-cms-navigate",href:url.href,target:link.target||""},"*")});'
+            .'new ResizeObserver(reportPageHeight).observe(document.documentElement);'
+            .'window.addEventListener("load",reportPageHeight);reportPageHeight();'
+            .'</script>';
+
+        return '<!doctype html><html lang="en"><head>'
+            .'<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+            .'<meta http-equiv="Content-Security-Policy" content="'.e($contentSecurityPolicy).'">'
+            .'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap">'
+            .'<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">'
+            .'<link rel="stylesheet" href="'.e($stylesheet).'">'
+            .'<style>html{scroll-behavior:smooth}html,body{overflow:hidden}body{margin:0;background-color:var(--storefront-bg);color:var(--storefront-text);font-family:'.Palette::bodyFont().'}</style>'
+            .'<style>'.$css.'</style></head>'
+            .'<body style="'.e($bodyStyle).'">'
+            .PageBlocks::renderPageHeaders(ProductGrid::render($html, $currency), $pageTitle)
+            .PageBlocks::script($nonce, url()->current())
+            .$resizeScript.'</body></html>';
     }
 }

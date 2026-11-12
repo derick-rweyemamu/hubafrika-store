@@ -12,7 +12,7 @@
     <!-- Fonts: the families selectable in the admin panel -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -23,7 +23,11 @@
         {{-- Content pages read the header menu, commerce pages the store menu --}}
         @include('components.layouts.navigation', ['navigationArea' => $navigationArea ?? 'header'])
 
-        <main class="mx-auto w-full max-w-[1200px] flex-1 px-5 py-8">
+        @if (! empty($pageHeader))
+            @include('components.layouts.partials.page-header', ['pageHeader' => $pageHeader])
+        @endif
+
+        <main class="{{ ($fullWidth ?? false) ? 'w-full flex-1' : 'mx-auto w-full max-w-[1200px] flex-1 px-5 py-8' }}">
             @if (isset($slot) && !empty((string) $slot))
                 {{ $slot }}
             @else
@@ -33,6 +37,7 @@
 
         @include('components.layouts.partials.storefront-footer')
     </div>
+    @include('components.layouts.partials.whatsapp-float')
     <x-confirm-dialog />
     @livewireScripts
 </body>

@@ -27,6 +27,12 @@ class Payments extends Component
                 ->whereHas('order', fn ($query) => $query->where('user_id', $customer->id))
                 ->where('status', Payment::STATUS_AWAITING_VERIFICATION)
                 ->count(),
-        ])->layout('components.layouts.storefront', ['title' => 'My payments', 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'My payments',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'My payments',
+            ],
+        ]);
     }
 }

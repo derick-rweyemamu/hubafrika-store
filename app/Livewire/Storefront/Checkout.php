@@ -20,6 +20,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Spatie\Permission\Models\Role;
 
 class Checkout extends Component
 {
@@ -303,6 +304,10 @@ class Checkout extends Component
             'password' => Hash::make($account['password']),
         ]);
 
+        if (Role::where('name', 'customer')->where('guard_name', 'web')->exists()) {
+            $customer->assignRole('customer');
+        }
+
         event(new Registered($customer));
 
         Auth::login($customer);
@@ -387,7 +392,17 @@ class Checkout extends Component
             'total' => round($subtotal - $discountTotal + $taxTotal + $shippingTotal, 2),
             'paymentOptions' => Payment::availableMethods(),
             'lipaAccount' => Payment::lipaAccount(),
-        ])->layout('components.layouts.storefront', ['title' => 'Checkout', 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'Checkout',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'Checkout',
+                'parents' => [
+                    ['label' => 'Shop', 'url' => route('shop')],
+                    ['label' => 'Your cart', 'url' => route('cart')],
+                ],
+            ],
+        ]);
     }
 
     /**

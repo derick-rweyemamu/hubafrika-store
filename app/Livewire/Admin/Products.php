@@ -8,10 +8,11 @@ use App\Models\Category;
 use App\Models\MediaReference;
 use App\Models\Product;
 use App\Models\Unit;
+use App\Support\RichText;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -21,6 +22,11 @@ use RuntimeException;
 class Products extends Component
 {
     use PicksLibraryMedia, WithFileUploads, WithPagination;
+
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('products.view'), 403);
+    }
 
     private const SORTABLE_COLUMNS = ['name', 'unit_price', 'current_stock', 'created_at'];
 
@@ -37,6 +43,8 @@ class Products extends Component
     public ?int $productId = null;
 
     public string $name = '';
+
+    public string $slug = '';
 
     public string $categoryId = '';
 
@@ -93,6 +101,13 @@ class Products extends Component
         $this->resetPage();
     }
 
+    public function updatedName(string $name): void
+    {
+        $this->slug = trim($name) === ''
+            ? ''
+            : Product::generateUniqueSlug($name, $this->productId);
+    }
+
     public function sortBy(string $field): void
     {
         abort_unless(auth()->user()?->can('products.view'), 403);
@@ -128,6 +143,7 @@ class Products extends Component
 
         $this->productId = $product->id;
         $this->name = $product->name;
+        $this->slug = (string) ($product->slug ?? '');
         $this->categoryId = (string) $product->category_id;
         $this->brandId = (string) ($product->brand_id ?? '');
         $this->unitId = (string) ($product->unit ?? '');
@@ -216,9 +232,14 @@ class Products extends Component
             return;
         }
 
-        $slug = $this->uniqueSlug($validated['name'], $product->exists ? $product->id : null);
+        $slug = Product::generateUniqueSlug($validated['name'], $product->exists ? $product->id : null);
+        $description = RichText::sanitize($validated['description'] ?? null);
+        $previousCategoryId = $product->exists && $product->category_id !== null
+            ? (int) $product->category_id
+            : null;
+        $nextCategoryId = (int) $validated['categoryId'];
 
-        DB::transaction(function () use ($product, $validated, $retainedLegacyPhotos, $slug): void {
+        DB::transaction(function () use ($product, $validated, $retainedLegacyPhotos, $slug, $description, $previousCategoryId, $nextCategoryId): void {
             $product->fill([
                 'name' => $validated['name'],
                 'slug' => $slug,
@@ -236,12 +257,30 @@ class Products extends Component
                 'tax_type' => $validated['taxType'] ?: null,
                 'barcode' => $validated['barcode'] ?: null,
                 'tags' => $validated['tags'] ?: null,
-                'description' => $validated['description'] ?: null,
+                'description' => $description,
                 'published' => $validated['published'],
                 'featured' => $validated['featured'],
                 'digital' => $validated['digital'],
             ]);
             $product->save();
+
+            if (
+                $previousCategoryId !== null
+                && $previousCategoryId !== $nextCategoryId
+                && Schema::hasTable('product_categories')
+            ) {
+                $removed = DB::table('product_categories')
+                    ->where('product_id', $product->id)
+                    ->where('category_id', $previousCategoryId)
+                    ->delete();
+
+                if ($removed > 0) {
+                    DB::table('product_categories')->insertOrIgnore([
+                        'product_id' => $product->id,
+                        'category_id' => $nextCategoryId,
+                    ]);
+                }
+            }
         });
 
         foreach ($product->getMedia('gallery') as $media) {
@@ -316,6 +355,7 @@ class Products extends Component
         $this->reset([
             'productId',
             'name',
+            'slug',
             'categoryId',
             'brandId',
             'unitId',
@@ -410,22 +450,6 @@ class Products extends Component
         }
 
         return $preview;
-    }
-
-    private function uniqueSlug(string $name, ?int $ignoreId): string
-    {
-        $baseSlug = Str::slug($name) ?: 'product';
-        $slug = $baseSlug;
-        $suffix = 2;
-
-        while (Product::query()
-            ->where('slug', $slug)
-            ->when($ignoreId !== null, fn (Builder $query) => $query->where('id', '!=', $ignoreId))
-            ->exists()) {
-            $slug = $baseSlug.'-'.$suffix++;
-        }
-
-        return $slug;
     }
 
     /**

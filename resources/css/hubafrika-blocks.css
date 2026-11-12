@@ -1,0 +1,388 @@
+/*
+ * HubAfrika Page Builder Block Styles
+ * Shared between storefront views, sandboxed CMS pages, and the GrapesJS canvas.
+ */
+
+.hubafrika-accent-text {
+    color: var(--storefront-primary, #16a34a);
+}
+
+.hubafrika-accent-bg {
+    background-color: var(--storefront-primary, #16a34a);
+    color: #ffffff;
+}
+
+.hubafrika-accent-soft {
+    color: var(--storefront-primary, #16a34a);
+    background-color: color-mix(in srgb, var(--storefront-primary, #16a34a) 12%, transparent);
+    border-color: color-mix(in srgb, var(--storefront-primary, #16a34a) 24%, transparent);
+}
+
+.hubafrika-accent-bar {
+    background-color: var(--storefront-primary, #16a34a);
+}
+
+.hubafrika-blockquote {
+    border-left-width: 4px;
+    border-left-color: var(--storefront-primary, #16a34a);
+}
+
+.hubafrika-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--storefront-primary, #16a34a);
+    color: #ffffff !important;
+    padding: 0.75rem 1.75rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-decoration: none !important;
+    box-shadow: 0 10px 18px -6px color-mix(in srgb, var(--storefront-primary, #16a34a) 35%, transparent);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
+}
+
+.hubafrika-btn-primary:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+
+.hubafrika-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: var(--storefront-surface, #ffffff);
+    color: var(--storefront-text, #1f2937) !important;
+    border: 1px solid color-mix(in srgb, var(--storefront-text, #1f2937) 18%, transparent);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-decoration: none !important;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.hubafrika-btn-outline:hover {
+    transform: translateY(-1px);
+    background-color: color-mix(in srgb, var(--storefront-text, #1f2937) 4%, var(--storefront-surface, #ffffff));
+}
+
+.hubafrika-surface-section {
+    background-color: var(--storefront-surface, #ffffff);
+    color: var(--storefront-text, #1e293b);
+}
+
+.hubafrika-muted-section {
+    background-color: color-mix(in srgb, var(--storefront-text, #1e293b) 3%, var(--storefront-bg, #f8fafc));
+    color: var(--storefront-text, #1e293b);
+}
+
+.hubafrika-card {
+    background-color: var(--storefront-surface, #ffffff);
+    border: 1px solid color-mix(in srgb, var(--storefront-text, #1f2937) 10%, transparent);
+}
+
+.hubafrika-subcard {
+    background-color: color-mix(in srgb, var(--storefront-text, #1f2937) 3%, var(--storefront-surface, #ffffff));
+    border: 1px solid color-mix(in srgb, var(--storefront-text, #1f2937) 10%, transparent);
+}
+
+.hubafrika-hero-dark {
+    background: linear-gradient(
+        180deg,
+        var(--storefront-secondary, #0f172a) 0%,
+        color-mix(in srgb, var(--storefront-secondary, #0f172a) 88%, #000000) 100%
+    );
+    color: #ffffff;
+}
+
+.hubafrika-stats-dark {
+    background: linear-gradient(
+        120deg,
+        var(--storefront-secondary, #0f172a) 0%,
+        color-mix(in srgb, var(--storefront-primary, #16a34a) 72%, var(--storefront-secondary, #0f172a)) 100%
+    );
+    color: #ffffff;
+}
+
+/* Interactive Tabs */
+[data-hubafrika-tabs] [data-tab-btn] {
+    color: #475569;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+}
+
+[data-hubafrika-tabs] [data-tab-btn]:hover {
+    color: #0f172a;
+}
+
+[data-hubafrika-tabs] [data-tab-btn].is-active {
+    background-color: var(--storefront-surface, #ffffff);
+    color: var(--storefront-primary, #16a34a);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+[data-hubafrika-tabs] [data-tab-panel] {
+    display: none;
+}
+
+[data-hubafrika-tabs] [data-tab-panel].is-active {
+    display: block;
+    animation: hubafrikaTabFadeIn 0.25s ease-out;
+}
+
+@keyframes hubafrikaTabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Cross-browser Accordion & Toggle (<details>/<summary>) */
+.hubafrika-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.hubafrika-details[open] {
+    border-color: color-mix(in srgb, var(--storefront-primary, #16a34a) 45%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--storefront-primary, #16a34a) 12%, transparent);
+}
+
+.hubafrika-details[open] .hubafrika-chevron {
+    transform: rotate(180deg);
+}
+
+.hubafrika-details[open] .hubafrika-toggle-plus {
+    display: none;
+}
+
+.hubafrika-details:not([open]) .hubafrika-toggle-minus {
+    display: none;
+}
+
+.hubafrika-details[open] .hubafrika-toggle-badge {
+    background-color: var(--storefront-primary, #16a34a);
+    color: #ffffff;
+}
+
+/* 3D Flip Box (Hover + Touch Tap) */
+.hubafrika-flip-scene {
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.hubafrika-flip-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hubafrika-flip-scene:hover .hubafrika-flip-card,
+.hubafrika-flip-scene.is-flipped .hubafrika-flip-card {
+    transform: rotateY(180deg);
+}
+
+.hubafrika-flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.hubafrika-flip-back {
+    transform: rotateY(180deg);
+    background: linear-gradient(
+        135deg,
+        var(--storefront-primary, #16a34a),
+        var(--storefront-secondary, #0f172a)
+    );
+    color: #ffffff;
+}
+
+/* Progress Bar & Animated Headline */
+.hubafrika-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(
+        90deg,
+        var(--storefront-primary, #16a34a),
+        var(--storefront-accent, #10b981)
+    );
+    transition: width 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hubafrika-headline-highlight {
+    background-image: linear-gradient(
+        90deg,
+        var(--storefront-primary, #16a34a),
+        var(--storefront-accent, #10b981)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+@keyframes hubafrikaStrokeSweep {
+    0%,
+    10% {
+        stroke-dashoffset: 120;
+    }
+    45%,
+    85% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: 120;
+    }
+}
+
+.hubafrika-headline-stroke {
+    stroke: var(--storefront-primary, #16a34a);
+    stroke-dasharray: 120;
+    stroke-dashoffset: 0;
+    animation: hubafrikaStrokeSweep 4s ease-in-out infinite;
+}
+
+/* Partner / Brand Looping Logo Slider */
+.hubafrika-logo-slider {
+    position: relative;
+}
+
+.hubafrika-logo-slider-viewport {
+    overflow: hidden;
+    width: 100%;
+}
+
+.logo-marquee-track,
+.hubafrika-marquee-track,
+.hubafrika-logo-slider-track {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+.hubafrika-logo-slide {
+    box-sizing: border-box;
+    flex: 0 0 calc(100% / var(--hubafrika-logo-cols, 2));
+    padding: 0 4px;
+}
+
+@media (min-width: 640px) {
+    .hubafrika-logo-slide {
+        flex-basis: calc(100% / var(--hubafrika-logo-cols-sm, 4));
+    }
+}
+
+@media (min-width: 1024px) {
+    .hubafrika-logo-slide {
+        flex-basis: calc(100% / var(--hubafrika-logo-cols-lg, var(--hubafrika-logo-visible, 6)));
+    }
+}
+
+.hubafrika-logo-slide-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-decoration: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.hubafrika-logo-slide-card:not([href]),
+.hubafrika-logo-slide-card[href=""],
+.hubafrika-logo-slide-card[href="#"] {
+    cursor: default;
+}
+
+.hubafrika-logo-slide-card[href]:not([href=""]):not([href="#"]):hover {
+    transform: translateY(-2px);
+    opacity: 0.88;
+}
+
+.hubafrika-logo-slide-card img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 92px;
+    object-fit: contain;
+    display: block;
+}
+
+.hubafrika-logo-nav {
+    display: none;
+}
+
+/* Page Header / Breadcrumb Banner */
+.hubafrika-page-header {
+    width: 100%;
+    background-color: color-mix(in srgb, var(--storefront-text, #111111) 4.5%, var(--storefront-surface, #ffffff));
+    border-bottom: 1px solid color-mix(in srgb, var(--storefront-text, #111111) 11%, transparent);
+    padding: 34px 0;
+}
+
+.hubafrika-page-header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.hubafrika-page-header-title {
+    margin: 0;
+    color: var(--storefront-text, #111111);
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.hubafrika-page-header-crumb {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: color-mix(in srgb, var(--storefront-text, #111111) 55%, transparent);
+}
+
+.hubafrika-page-header-crumb a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.hubafrika-page-header-crumb a:hover {
+    color: var(--storefront-primary, #307F3E);
+    text-decoration: underline;
+}
+
+.dark .hubafrika-page-header {
+    background-color: color-mix(in srgb, var(--storefront-text-dark, #f3f4f6) 5%, var(--storefront-surface-dark, #111827));
+    border-bottom-color: color-mix(in srgb, var(--storefront-text-dark, #f3f4f6) 12%, transparent);
+}
+
+.dark .hubafrika-page-header-title {
+    color: var(--storefront-text-dark, #f3f4f6);
+}
+
+.dark .hubafrika-page-header-crumb {
+    color: color-mix(in srgb, var(--storefront-text-dark, #f3f4f6) 60%, transparent);
+}
+

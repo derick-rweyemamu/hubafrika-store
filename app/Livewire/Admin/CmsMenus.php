@@ -9,6 +9,7 @@ use App\Models\CmsMenuItem;
 use App\Models\CmsPage;
 use App\Models\CmsPost;
 use App\Models\Product;
+use App\Support\RichText;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -278,32 +279,44 @@ class CmsMenus extends Component
         $this->showMenuModal = false;
     }
 
+    public function updated(string $property, mixed $value): void
+    {
+        if ($property === 'menu_description') {
+            $this->menuDescription = $value;
+        }
+    }
+
     public function saveMenu(): void
     {
         $title = $this->menu_title ?: $this->menuName;
         $slug = $this->menu_slug ?: $this->menuSlug;
         $cssClass = $this->menu_css_class ?: $this->menuCssClass;
-        $desc = $this->menu_description ?: $this->menuDescription;
+        $desc = $this->menu_description !== null && $this->menu_description !== ''
+            ? $this->menu_description
+            : ($this->editingMenuId && $this->menu_description === '' ? '' : $this->menuDescription);
 
         $this->menu_title = $title;
         $this->menu_slug = $slug;
         $this->menuName = $title;
         $this->menuSlug = $slug;
+        $this->menu_description = $desc;
 
         $this->validate([
             'menu_title' => 'required|string|max:191',
             'menu_slug' => 'required|string|max:100|alpha_dash|unique:cms_menus,slug,'.($this->editingMenuId ?: 'NULL').',id',
             'menu_location' => 'nullable|string|in:header,footer,topbar,sidebar,store,mobile',
-            'menu_description' => 'nullable|string|max:255',
+            'menu_description' => 'nullable|string|max:5000',
             'menu_status' => 'nullable|in:0,1',
         ]);
+
+        $sanitizedDescription = RichText::sanitize($desc);
 
         $data = [
             'name' => $title,
             'title' => $title,
             'slug' => $slug,
             'location' => $this->menu_location ?: 'header',
-            'description' => $desc ?: null,
+            'description' => $sanitizedDescription,
             'css_class' => $cssClass ?: null,
             'status' => $this->menu_status ?? 1,
         ];
@@ -469,7 +482,7 @@ class CmsMenus extends Component
 
         // Custom validation for URL safety
         $urlRule = function ($attribute, $value, $fail) {
-            if (empty($value)) {
+            if ($value === null || $value === '') {
                 return;
             }
             if (str_starts_with(strtolower($value), 'javascript:')) {
@@ -514,6 +527,7 @@ class CmsMenus extends Component
             'item_category_id' => 'nullable|required_if:item_type,category|exists:categories,id',
             'item_product_id' => 'nullable|required_if:item_type,product|exists:products,id',
             'item_url' => ['nullable', $urlRule],
+            'url' => ['nullable', $urlRule],
             'item_target' => 'nullable|string|in:_self,_blank',
             'item_icon' => 'nullable|string|max:100',
             'item_image' => 'nullable|image|max:3072',
@@ -553,7 +567,10 @@ class CmsMenus extends Component
         $imagePath = $uploadedImage !== null || $pickedImage || $this->item_image_cleared ? null : $previousImage;
 
         // URL destination
-        $finalUrl = $this->item_url ?: $this->url;
+        $finalUrl = ($this->item_url !== null && $this->item_url !== '') ? $this->item_url : (($this->url !== '') ? $this->url : null);
+        if ($this->item_type === 'custom' && ($finalUrl === null || $finalUrl === '')) {
+            $finalUrl = '#';
+        }
         if ($this->item_type === 'site' && $this->item_site_path) {
             $finalUrl = $this->item_site_path;
         } elseif ($this->item_type === 'category' && $this->item_category_id) {
@@ -822,7 +839,14 @@ class CmsMenus extends Component
 
         $item = CmsMenuItem::findOrFail($this->megaBuilderItemId);
         $colsCount = min(4, max(1, count($this->mega_columns)));
-        $columns = array_slice($this->mega_columns, 0, 4);
+        $columns = array_map(function (array $column): array {
+            if (($column['type'] ?? '') === 'promo' && array_key_exists('content', $column)) {
+                $column['content'] = RichText::sanitize((string) $column['content']) ?? '';
+            }
+
+            return $column;
+        }, array_slice($this->mega_columns, 0, 4));
+        $this->mega_columns = $columns;
 
         $item->update([
             'is_mega_menu' => true,
@@ -915,14 +939,20 @@ class CmsMenus extends Component
             $this->url = $this->item_url;
         }
 
-        if ($this->isMegaMenu) {
+        if ($this->isMegaMenu && ! $this->item_is_mega_menu) {
             $this->item_is_mega_menu = true;
+        } elseif ($this->item_is_mega_menu && ! $this->isMegaMenu) {
+            $this->isMegaMenu = true;
         }
         if ($this->megaMenuColumns && ! $this->item_mega_menu_columns) {
             $this->item_mega_menu_columns = $this->megaMenuColumns;
+        } elseif ($this->item_mega_menu_columns && ! $this->megaMenuColumns) {
+            $this->megaMenuColumns = $this->item_mega_menu_columns;
         }
         if ($this->megaMenuColumn && ! $this->item_mega_column) {
             $this->item_mega_column = $this->megaMenuColumn;
+        } elseif ($this->item_mega_column && ! $this->megaMenuColumn) {
+            $this->megaMenuColumn = $this->item_mega_column;
         }
         if ($this->badge && ! $this->item_badge_text) {
             $this->item_badge_text = $this->badge;

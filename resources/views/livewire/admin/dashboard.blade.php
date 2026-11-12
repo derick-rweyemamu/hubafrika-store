@@ -59,50 +59,60 @@
         ];
     }
 
-    $customerCard = [
-        'label' => 'New customers · 30 days',
-        'value' => number_format($customers['value']),
-        'note' => number_format($customers['total']).' customers in total',
-        'delta' => $customers['delta'],
-        'spark' => $customers['spark'],
-        'icon' => 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
-        'tone' => 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300',
-    ];
+    $customerCard = $customers !== null
+        ? [
+            'label' => 'New customers · 30 days',
+            'value' => number_format($customers['value']),
+            'note' => number_format($customers['total']).' customers in total',
+            'delta' => $customers['delta'],
+            'spark' => $customers['spark'],
+            'icon' => 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
+            'tone' => 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300',
+        ]
+        : null;
 
     if ($sales) {
-        $cards[] = $customerCard;
+        if ($customerCard !== null) {
+            $cards[] = $customerCard;
+        }
     } else {
-        $cards[] = [
-            'label' => 'Live products',
-            'value' => number_format($catalog['published']),
-            'note' => number_format($catalog['total']).' in the catalogue',
-            'delta' => null,
-            'spark' => '',
-            'icon' => 'M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z',
-            'tone' => 'admin-primary-soft-bg admin-primary-text',
-        ];
+        if ($abilities['products'] && $catalog !== null) {
+            $cards[] = [
+                'label' => 'Live products',
+                'value' => number_format($catalog['published']),
+                'note' => number_format($catalog['total']).' in the catalogue',
+                'delta' => null,
+                'spark' => '',
+                'icon' => 'M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z',
+                'tone' => 'admin-primary-soft-bg admin-primary-text',
+            ];
 
-        $cards[] = [
-            'label' => 'Hidden products',
-            'value' => number_format(max(0, $catalog['total'] - $catalog['published'])),
-            'note' => 'Not visible in the shop',
-            'delta' => null,
-            'spark' => '',
-            'icon' => 'M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88',
-            'tone' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300',
-        ];
+            $cards[] = [
+                'label' => 'Hidden products',
+                'value' => number_format(max(0, $catalog['total'] - $catalog['published'])),
+                'note' => 'Not visible in the shop',
+                'delta' => null,
+                'spark' => '',
+                'icon' => 'M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88',
+                'tone' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300',
+            ];
+        }
 
-        $cards[] = [
-            'label' => 'Low stock',
-            'value' => number_format($catalog['low_stock_count']),
-            'note' => number_format($catalog['out_of_stock_count']).' out of stock',
-            'delta' => null,
-            'spark' => '',
-            'icon' => 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z',
-            'tone' => 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
-        ];
+        if ($abilities['inventory'] && $catalog !== null) {
+            $cards[] = [
+                'label' => 'Low stock',
+                'value' => number_format($catalog['low_stock_count']),
+                'note' => number_format($catalog['out_of_stock_count']).' out of stock',
+                'delta' => null,
+                'spark' => '',
+                'icon' => 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z',
+                'tone' => 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
+            ];
+        }
 
-        $cards[] = $customerCard;
+        if ($customerCard !== null) {
+            $cards[] = $customerCard;
+        }
     }
 
     $showLowStockAlert = $abilities['inventory'] && $attention['low_stock'] > 0;
@@ -110,16 +120,20 @@
 
     $actions = [];
 
-    if ($abilities['products']) {
+    if ($abilities['products_manage']) {
         $actions[] = ['label' => 'Add a product', 'href' => route('admin.products'), 'icon' => 'M12 4.5v15m7.5-7.5h-15'];
+    } elseif ($abilities['products']) {
+        $actions[] = ['label' => 'View products', 'href' => route('admin.products'), 'icon' => 'M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25'];
     }
 
     if ($abilities['orders']) {
         $actions[] = ['label' => 'Review orders', 'href' => route('admin.orders'), 'icon' => 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'];
     }
 
-    if ($abilities['inventory']) {
+    if ($abilities['inventory_manage']) {
         $actions[] = ['label' => 'Adjust stock', 'href' => route('admin.inventory'), 'icon' => 'M3 7.5L12 3m0 0l9 4.5M12 3v18m9-13.5V16.5L12 21m9-13.5L12 12M3 7.5V16.5L12 21M3 7.5L12 12'];
+    } elseif ($abilities['inventory']) {
+        $actions[] = ['label' => 'View inventory', 'href' => route('admin.inventory'), 'icon' => 'M3 7.5L12 3m0 0l9 4.5M12 3v18m9-13.5V16.5L12 21m9-13.5L12 12M3 7.5V16.5L12 21M3 7.5L12 12'];
     }
 
     if ($abilities['customers']) {
@@ -218,7 +232,7 @@
     @endif
 
     {{-- Store is still empty ------------------------------------------- --}}
-    @if ($catalog['total'] === 0)
+    @if ($catalog !== null && $catalog['total'] === 0)
         <section class="rounded-xl border border-dashed border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-900 sm:p-8">
             <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-start gap-4">
@@ -230,7 +244,7 @@
                         <p class="mt-1 max-w-lg text-sm text-gray-500 dark:text-gray-400">Add your first product, set its price and stock level, and the sales panels on this page will start filling in.</p>
                     </div>
                 </div>
-                @if ($abilities['products'])
+                @if ($abilities['products_manage'])
                     <a href="{{ route('admin.products') }}" wire:navigate class="admin-primary-bg shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold text-white">
                         Add a product
                     </a>
@@ -240,7 +254,8 @@
     @endif
 
     {{-- KPI cards ------------------------------------------------------- --}}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @if ($cards !== [])
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($cards as $card)
             <article class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex items-start justify-between gap-3">
@@ -279,7 +294,8 @@
                 @endif
             </article>
         @endforeach
-    </div>
+        </div>
+    @endif
 
     @if ($sales)
         {{-- Sales trend + order pipeline --------------------------------- --}}
@@ -392,7 +408,7 @@
         </div>
 
         {{-- Top sellers + low stock -------------------------------------- --}}
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div @class(['grid grid-cols-1 gap-4', 'xl:grid-cols-2' => $catalog !== null])>
             <section class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
                 <div class="flex items-baseline justify-between gap-3">
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Top sellers · 30 days</h3>
@@ -433,55 +449,57 @@
                 @endif
             </section>
 
-            <section class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <div class="flex items-baseline justify-between gap-3">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Low stock</h3>
-                    <span class="text-xs text-gray-400">
-                        {{ number_format($catalog['low_stock_count']) }} flagged
-                        @if ($catalog['out_of_stock_count'] > 0)
-                            · {{ number_format($catalog['out_of_stock_count']) }} out
-                        @endif
-                    </span>
-                </div>
-
-                @if ($catalog['low_stock_products']->isEmpty())
-                    <div class="mt-6 flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center dark:border-gray-700">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+            @if ($catalog !== null)
+                <section class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                    <div class="flex items-baseline justify-between gap-3">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Low stock</h3>
+                        <span class="text-xs text-gray-400">
+                            {{ number_format($catalog['low_stock_count']) }} flagged
+                            @if ($catalog['out_of_stock_count'] > 0)
+                                · {{ number_format($catalog['out_of_stock_count']) }} out
+                            @endif
                         </span>
-                        <p class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-200">Every published product is well stocked.</p>
                     </div>
-                @else
-                    <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach ($catalog['low_stock_products'] as $product)
-                            <li class="flex items-center justify-between gap-3 py-3">
-                                <div class="min-w-0">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $product->name }}</p>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $product->current_stock <= 0 ? 'Out of stock' : $product->current_stock.' left' }}
-                                        @if ($product->low_stock_quantity)
-                                            · alerts at {{ $product->low_stock_quantity }}
-                                        @endif
-                                    </p>
-                                </div>
-                                <span @class([
-                                    'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-                                    'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' => $product->current_stock <= 0,
-                                    'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' => $product->current_stock > 0,
-                                ])>
-                                    {{ $product->current_stock <= 0 ? 'Restock' : 'Low' }}
-                                </span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
 
-                @if ($abilities['inventory'])
-                    <div class="mt-auto border-t border-gray-100 pt-3 dark:border-gray-800">
-                        <a href="{{ route('admin.inventory') }}" wire:navigate class="admin-primary-text text-xs font-semibold hover:underline">Manage inventory →</a>
-                    </div>
-                @endif
-            </section>
+                    @if ($catalog['low_stock_products']->isEmpty())
+                        <div class="mt-6 flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center dark:border-gray-700">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                            </span>
+                            <p class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-200">Every published product is well stocked.</p>
+                        </div>
+                    @else
+                        <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach ($catalog['low_stock_products'] as $product)
+                                <li class="flex items-center justify-between gap-3 py-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $product->name }}</p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            {{ $product->current_stock <= 0 ? 'Out of stock' : $product->current_stock.' left' }}
+                                            @if ($product->low_stock_quantity)
+                                                · alerts at {{ $product->low_stock_quantity }}
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <span @class([
+                                        'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                                        'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' => $product->current_stock <= 0,
+                                        'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' => $product->current_stock > 0,
+                                    ])>
+                                        {{ $product->current_stock <= 0 ? 'Restock' : 'Low' }}
+                                    </span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    @if ($abilities['inventory'])
+                        <div class="mt-auto border-t border-gray-100 pt-3 dark:border-gray-800">
+                            <a href="{{ route('admin.inventory') }}" wire:navigate class="admin-primary-text text-xs font-semibold hover:underline">Manage inventory →</a>
+                        </div>
+                    @endif
+                </section>
+            @endif
         </div>
 
         {{-- Recent orders + quick actions -------------------------------- --}}
@@ -569,56 +587,59 @@
                     </section>
                 @endif
 
-                <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="flex items-baseline justify-between gap-3">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Newest customers</h3>
-                        @if ($abilities['customers'])
+                @if ($customers !== null)
+                    <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Newest customers</h3>
                             <a href="{{ route('admin.customers') }}" wire:navigate class="text-xs font-semibold text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-200">All →</a>
-                        @endif
-                    </div>
+                        </div>
 
-                    @if ($customers['recent']->isEmpty())
-                        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">No customers have signed up yet.</p>
-                    @else
-                        <ul class="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
-                            @foreach ($customers['recent'] as $customer)
-                                <li class="flex items-center gap-3 py-2.5">
-                                    <span class="admin-primary-soft-bg admin-primary-text flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                                        {{ mb_strtoupper(mb_substr($customer->name, 0, 1)) }}
-                                    </span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $customer->name }}</p>
-                                        <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $customer->email }}</p>
-                                    </div>
-                                    <span class="shrink-0 text-[11px] text-gray-400">{{ $customer->created_at?->diffForHumans() }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
-                </section>
+                        @if ($customers['recent']->isEmpty())
+                            <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">No customers have signed up yet.</p>
+                        @else
+                            <ul class="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach ($customers['recent'] as $customer)
+                                    <li class="flex items-center gap-3 py-2.5">
+                                        <span class="admin-primary-soft-bg admin-primary-text flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                                            {{ mb_strtoupper(mb_substr($customer->name, 0, 1)) }}
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $customer->name }}</p>
+                                            <p class="truncate text-xs text-gray-500 dark:text-gray-400">{{ $customer->email }}</p>
+                                        </div>
+                                        <span class="shrink-0 text-[11px] text-gray-400">{{ $customer->created_at?->diffForHumans() }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
+                @endif
             </div>
         </div>
     @else
         {{-- Staff without order access still get the catalogue picture --- --}}
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <section class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Low stock</h3>
+        @if ($catalog !== null || $actions !== [])
+            <div @class(['grid grid-cols-1 gap-4', 'xl:grid-cols-2' => $catalog !== null && $actions !== []])>
+                @if ($catalog !== null)
+                    <section class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Low stock</h3>
 
-                @if ($catalog['low_stock_products']->isEmpty())
-                    <p class="mt-6 flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                        Every published product is well stocked.
-                    </p>
-                @else
-                    <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach ($catalog['low_stock_products'] as $product)
-                            <li class="flex items-center justify-between gap-3 py-3">
-                                <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $product->name }}</p>
-                                <span class="shrink-0 text-xs font-semibold text-amber-600 dark:text-amber-300">{{ $product->current_stock }} left</span>
-                            </li>
-                        @endforeach
-                    </ul>
+                        @if ($catalog['low_stock_products']->isEmpty())
+                            <p class="mt-6 flex flex-1 items-center justify-center rounded-lg border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                                Every published product is well stocked.
+                            </p>
+                        @else
+                            <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach ($catalog['low_stock_products'] as $product)
+                                    <li class="flex items-center justify-between gap-3 py-3">
+                                        <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $product->name }}</p>
+                                        <span class="shrink-0 text-xs font-semibold text-amber-600 dark:text-amber-300">{{ $product->current_stock }} left</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </section>
                 @endif
-            </section>
 
             @if ($actions !== [])
                 <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -640,6 +661,7 @@
                     </div>
                 </section>
             @endif
-        </div>
+            </div>
+        @endif
     @endif
 </div>

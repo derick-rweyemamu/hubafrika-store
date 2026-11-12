@@ -13,6 +13,7 @@
                 <div class="grid gap-6 lg:grid-cols-2">
                     @include('profile.partials.update-password-form')
                     @include('profile.partials.delete-user-form')
+                    @include('profile.partials.two-factor-authentication-form')
                 </div>
             @else
                 @include('profile.partials.account-overview')

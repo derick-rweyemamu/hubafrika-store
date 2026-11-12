@@ -88,7 +88,16 @@ class OrderDetail extends Component
         return view('livewire.storefront.order-detail', [
             'lipaAccount' => Payment::lipaAccount(),
             'timeline' => $this->timeline(),
-        ])->layout('components.layouts.storefront', ['title' => 'Order '.$this->order->order_number, 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'Order '.$this->order->order_number,
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'Order '.$this->order->order_number,
+                'parents' => [
+                    ['label' => 'My orders', 'url' => route('orders.index')],
+                ],
+            ],
+        ]);
     }
 
     /**

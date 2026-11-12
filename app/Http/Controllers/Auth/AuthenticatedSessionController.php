@@ -15,8 +15,10 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        $request->session()->forget('two_factor.login');
+
         return view('auth.login');
     }
 
@@ -25,14 +27,26 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        $user = $request->validateCredentials();
 
         $request->session()->regenerate();
 
-        // Anything collected as a guest follows the customer into the account.
-        CartSession::claim($request->user());
+        if ($user->hasTwoFactorEnabled()) {
+            $request->session()->put('two_factor.login', [
+                'id' => $user->getAuthIdentifier(),
+                'remember' => $request->boolean('remember'),
+                'expires_at' => now()->addMinutes(10)->getTimestamp(),
+            ]);
 
-        if ($request->user()->is_admin) {
+            return redirect()->route('two-factor.login');
+        }
+
+        Auth::login($user, $request->boolean('remember'));
+
+        // Anything collected as a guest follows the customer into the account.
+        CartSession::claim($user);
+
+        if ($user->is_admin) {
             return redirect()->route('admin.dashboard');
         }
 

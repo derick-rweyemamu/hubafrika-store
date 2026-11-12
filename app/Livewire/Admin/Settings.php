@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Livewire\Concerns\PicksLibraryMedia;
 use App\Models\BusinessSetting;
+use App\Support\RichText;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -20,8 +21,8 @@ class Settings extends Component
     private const TABS = [
         'general' => [
             'label' => 'General',
-            'description' => 'Store identity, locale, and availability.',
-            'groups' => ['Basic settings', 'Brand assets'],
+            'description' => 'Store identity, contact channels, social links, and availability.',
+            'groups' => ['Basic settings', 'Contact & social', 'Brand assets'],
         ],
         'shipping-checkout' => [
             'label' => 'Shipping & payment',
@@ -181,6 +182,8 @@ class Settings extends Component
 
     public function updatedSettingType(?string $type): void
     {
+        $this->authorizeAdmin();
+
         $definition = $this->definitions()[$type] ?? null;
 
         $this->settingKind = $definition['kind'] ?? null;
@@ -285,7 +288,7 @@ class Settings extends Component
                 ? $this->imageRules($settingType)
                 : ['nullable'];
         } else {
-            $validationRules = [...$validationRules, ...$this->valueRules($definition['kind'])];
+            $validationRules = [...$validationRules, ...$this->valueRules($definition['kind'], $settingType)];
         }
 
         $validated = $this->validate($validationRules);
@@ -317,9 +320,11 @@ class Settings extends Component
             return;
         }
 
-        $value = $definition['kind'] === 'palette'
-            ? json_encode($validated['palette'], JSON_THROW_ON_ERROR)
-            : $validated['value'];
+        $value = match ($definition['kind']) {
+            'palette' => json_encode($validated['palette'], JSON_THROW_ON_ERROR),
+            'textarea' => RichText::sanitize((string) ($validated['value'] ?? '')) ?? '',
+            default => $validated['value'],
+        };
 
         BusinessSetting::updateOrCreate(
             ['type' => $validated['settingType']],
@@ -419,6 +424,7 @@ class Settings extends Component
                 'palette_selection' => 'Palette '.$settingValue,
                 'image' => $imageUrl === null ? 'Not uploaded' : 'Uploaded',
                 'secret' => $settingValue === '' ? 'Not set' : '••••••••',
+                'textarea' => ($plain = RichText::plainText($settingValue, 220)) === '' ? 'Not set' : $plain,
                 default => $settingValue === '' ? 'Not set' : $settingValue,
             };
 
@@ -488,6 +494,16 @@ class Settings extends Component
         $definitions = [
             'site_name' => ['group' => 'Basic settings', 'label' => 'Site name', 'kind' => 'text'],
             'site_motto' => ['group' => 'Basic settings', 'label' => 'Site motto', 'kind' => 'text'],
+            'footer_about' => ['group' => 'Basic settings', 'label' => 'Footer about us', 'kind' => 'textarea'],
+            'contact_email' => ['group' => 'Contact & social', 'label' => 'Contact email', 'kind' => 'email'],
+            'contact_phone' => ['group' => 'Contact & social', 'label' => 'Contact phone', 'kind' => 'phone'],
+            'whatsapp_number' => ['group' => 'Contact & social', 'label' => 'WhatsApp number', 'kind' => 'whatsapp'],
+            'social_facebook' => ['group' => 'Contact & social', 'label' => 'Facebook URL', 'kind' => 'url'],
+            'social_instagram' => ['group' => 'Contact & social', 'label' => 'Instagram URL', 'kind' => 'url'],
+            'social_x' => ['group' => 'Contact & social', 'label' => 'X (Twitter) URL', 'kind' => 'url'],
+            'social_youtube' => ['group' => 'Contact & social', 'label' => 'YouTube URL', 'kind' => 'url'],
+            'social_linkedin' => ['group' => 'Contact & social', 'label' => 'LinkedIn URL', 'kind' => 'url'],
+            'social_tiktok' => ['group' => 'Contact & social', 'label' => 'TikTok URL', 'kind' => 'url'],
             'currency_code' => ['group' => 'Basic settings', 'label' => 'Currency code', 'kind' => 'currency_code'],
             'currency_symbol' => ['group' => 'Basic settings', 'label' => 'Currency symbol', 'kind' => 'text'],
             'default_language' => ['group' => 'Basic settings', 'label' => 'Default language', 'kind' => 'language'],
@@ -646,7 +662,7 @@ class Settings extends Component
     /**
      * @return array<string, array<int|string, mixed>>
      */
-    private function valueRules(string $kind): array
+    private function valueRules(string $kind, ?string $type = null): array
     {
         if ($kind === 'palette') {
             $rules = [
@@ -667,14 +683,51 @@ class Settings extends Component
             'country' => ['required', 'integer', 'min:1'],
             'currency_code' => ['required', 'regex:/\A[A-Z]{3}\z/'],
             'decimal' => ['required', 'numeric', 'min:0'],
+            'email' => ['nullable', 'email:rfc', 'max:255'],
             'font' => ['required', Rule::in(self::FONT_FAMILIES)],
             'admin_font' => ['required', Rule::in(['Inter', 'Arial', 'Georgia', 'System'])],
             'font_size' => ['required', 'regex:/\A\d+(?:\.\d+)?(?:px|rem|em|%)\z/'],
             'language' => ['required', 'regex:/\A[a-zA-Z]{2,5}(?:[-_][a-zA-Z0-9]{2,8})?\z/'],
             'lipa_number' => ['required', 'regex:/\A\d{5,9}\z/'],
             'palette_selection' => ['required', 'integer', 'between:1,4'],
+            'phone' => ['nullable', 'regex:/\A[+\d\s().-]{5,35}\z/'],
             'secret' => ['nullable', 'string', 'max:255'],
-            'textarea' => ['required', 'string', 'max:1000'],
+            'textarea' => [
+                $type === 'footer_about' ? 'nullable' : 'required',
+                'string',
+                'max:10000',
+                function (string $attribute, mixed $value, \Closure $fail) use ($type): void {
+                    if ($type !== 'footer_about' && RichText::sanitize((string) $value) === null) {
+                        $fail('The payment instructions field is required.');
+                    }
+                },
+            ],
+            'url' => ['nullable', 'url:http,https', 'max:500'],
+            'whatsapp' => [
+                'nullable',
+                'string',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $trimmed = trim((string) $value);
+                    if ($trimmed === '') {
+                        return;
+                    }
+
+                    if (preg_match('/\Ahttps?:\/\//i', $trimmed) === 1) {
+                        $scheme = strtolower((string) parse_url($trimmed, PHP_URL_SCHEME));
+                        if (filter_var($trimmed, FILTER_VALIDATE_URL) === false || ! in_array($scheme, ['http', 'https'], true)) {
+                            $fail('Enter a valid WhatsApp phone number or https://wa.me link.');
+                        }
+
+                        return;
+                    }
+
+                    $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
+                    if (preg_match('/\A[+\d\s().-]+\z/', $trimmed) !== 1 || strlen($digits) < 7 || strlen($digits) > 15) {
+                        $fail('Enter a valid WhatsApp phone number (7-15 digits) or WhatsApp URL.');
+                    }
+                },
+            ],
             default => ['required', 'string', 'max:500'],
         };
 

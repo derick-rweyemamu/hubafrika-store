@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\CmsPages;
 use App\Models\Brand;
+use App\Models\Category;
 use App\Models\CmsPage;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -152,10 +153,34 @@ class CmsPagesTest extends CatalogTestCase
             ->assertSee('<html lang=', false)
             ->assertSee('height: 100%', false)
             ->assertDontSee('id="admin-sidebar"', false)
+            ->assertSee('showDevices: false', false)
+            ->assertSee('data-builder-device="Desktop"', false)
+            ->assertSee('data-builder-device="Tablet"', false)
+            ->assertSee('data-builder-device="Mobile"', false)
             ->assertSee('Saved before the visual builder')
             ->assertSee('grid-6-col')
+            ->assertSee('hubafrika-page-header')
+            ->assertSee('Page Header')
             ->assertSee('widget-tabs')
+            ->assertSee('widget-contact-form')
+            ->assertSee('widget-google-maps')
             ->assertSee('school-faq-accordion')
+            ->assertSee('font-awesome/6.5.2/css/all.min.css', false)
+            ->assertSee('--storefront-primary:', false)
+            ->assertSee('syncCanvasTheme')
+            ->assertSee('data-hubafrika-tabs')
+            ->assertSee('hubafrika-marquee-track')
+            ->assertSee('data-hubafrika-logo-slider')
+            ->assertSee('data-slides-visible')
+            ->assertSee('data-slide-step')
+            ->assertSee('data-slide-loop')
+            ->assertSee('data-logo-slide')
+            ->assertSee('Images to slide at a time')
+            ->assertSee('Open in new window')
+            ->assertDontSee('hubafrika-logo-nav--prev', false)
+            ->assertDontSee('hubafrika-logo-nav--next', false)
+            ->assertDontSee('href="/application"', false)
+            ->assertDontSee('x-data="{ activeTab', false)
             ->assertSee('.gjs-layer.gjs-selected');
     }
 
@@ -200,7 +225,7 @@ class CmsPagesTest extends CatalogTestCase
             'content' => json_encode([
                 'version' => 2,
                 'published' => false,
-                'project_data' => [],
+                'project_data' => ['assets' => [], 'pages' => [['frames' => []]]],
                 'html' => '<h1>Assets</h1>',
                 'css' => '',
             ], JSON_THROW_ON_ERROR),
@@ -213,11 +238,95 @@ class CmsPagesTest extends CatalogTestCase
         $customer->addLibraryMedia(UploadedFile::fake()->image('customer-avatar.png', 20, 20), 'avatar', 'user-'.$customer->id);
 
         // The page can place a picture that already exists in the library
-        // instead of uploading a second copy of it.
+        // instead of uploading a second copy of it, even when project_data already exists.
         $this->get(route('admin.cms.pages.builder', $page))
             ->assertOk()
             ->assertSee('acme-logo.png', false)
-            ->assertDontSee('customer-avatar.png', false);
+            ->assertDontSee('customer-avatar.png', false)
+            ->assertSee('open-media-library', false)
+            ->assertSee('hubafrika-media-modal', false)
+            ->assertSee('editor.AssetManager.add(initialLibraryAssets)', false);
+    }
+
+    public function test_visual_builder_media_library_endpoint_filters_and_excludes_personal_avatars(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        $brand = Brand::query()->create(['name' => 'Acme', 'slug' => 'acme']);
+        $brand->addLibraryMedia(UploadedFile::fake()->image('brand-banner.png', 40, 40), 'logo', 'acme');
+
+        $category = Category::query()->create(['name' => 'Inverters', 'slug' => 'inverters']);
+        $category->addLibraryMedia(UploadedFile::fake()->image('inverter-cat.png', 40, 40), 'banner', 'inverters');
+
+        $customer = User::factory()->create(['is_admin' => false]);
+        $customer->addLibraryMedia(UploadedFile::fake()->image('private-avatar.png', 20, 20), 'avatar', 'user-'.$customer->id);
+
+        $this->getJson(route('admin.cms.media-library'))
+            ->assertOk()
+            ->assertJsonFragment(['original_name' => 'brand-banner.png', 'library' => 'brands'])
+            ->assertJsonFragment(['original_name' => 'inverter-cat.png', 'library' => 'categories'])
+            ->assertJsonMissing(['original_name' => 'private-avatar.png']);
+
+        $this->getJson(route('admin.cms.media-library', ['library' => 'brands', 'search' => 'brand']))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.original_name', 'brand-banner.png');
+    }
+
+    public function test_builder_media_upload_accepts_single_and_multi_file_inputs(): void
+    {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        $page = CmsPage::query()->create([
+            'title' => 'Landing',
+            'slug' => 'landing',
+            'content' => '',
+        ]);
+
+        $this->post(route('admin.media.upload'), [
+            'file' => UploadedFile::fake()->image('hero-single.png', 100, 60),
+            'owner_type' => 'page',
+            'owner_id' => $page->id,
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.0.original_name', 'hero-single.png')
+            ->assertJsonPath('data.0.library', 'pages');
+
+        $this->post(route('admin.media.upload'), [
+            'files' => [UploadedFile::fake()->image('gallery-multi.png', 100, 60)],
+            'owner_type' => 'page',
+            'owner_id' => $page->id,
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.0.original_name', 'gallery-multi.png')
+            ->assertJsonPath('data.0.library', 'pages');
+
+        $this->assertSame(2, $page->refresh()->getMedia('blocks')->count());
+    }
+
+    public function test_visual_page_builder_provides_categories_and_brands_for_product_block_traits(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+        $category = Category::query()->create(['name' => 'Solar Inverters', 'slug' => 'solar-inverters']);
+        $brand = Brand::query()->create(['name' => 'Victron Master', 'slug' => 'victron-master']);
+
+        $page = CmsPage::query()->create([
+            'title' => 'Builder Traits Test',
+            'slug' => 'builder-traits-test',
+            'content' => '',
+        ]);
+
+        $this->get(route('admin.cms.pages.builder', $page))
+            ->assertOk()
+            ->assertViewHas('categories')
+            ->assertViewHas('brands')
+            ->assertSee('Solar Inverters')
+            ->assertSee('Victron Master')
+            ->assertSee('data-category')
+            ->assertSee('data-brand')
+            ->assertSee('Newest products');
     }
 
     public function test_visual_page_builder_is_admin_only(): void

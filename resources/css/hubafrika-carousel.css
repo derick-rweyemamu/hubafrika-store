@@ -1,0 +1,252 @@
+/*
+ * HubAfrika Storefront Hero Carousel
+ * Self-contained styles that do not rely on JIT utility extraction
+ */
+.hubafrika-carousel {
+    position: relative;
+    background-color: color-mix(in srgb, var(--storefront-text, #111) 4%, var(--storefront-bg, #fff));
+    color: var(--storefront-text, #111);
+    overflow: hidden;
+    border-bottom: 1px solid var(--storefront-border, rgba(0, 0, 0, 0.08));
+    user-select: none;
+}
+.hubafrika-carousel-inner {
+    position: relative;
+    width: 100%;
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 480px;
+    display: flex;
+    align-items: center;
+}
+@media (min-width: 640px) {
+    .hubafrika-carousel-inner { min-height: 500px; }
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-inner { min-height: 540px; }
+}
+.hubafrika-carousel-slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2.5rem 1.5rem;
+    gap: 2rem;
+}
+@media (min-width: 768px) {
+    .hubafrika-carousel-slide {
+        flex-direction: row;
+        padding: 2.5rem 3rem;
+    }
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-slide {
+        padding: 3.5rem 5rem;
+        gap: 3.5rem;
+    }
+}
+.hubafrika-carousel-content {
+    max-width: 540px;
+    width: 100%;
+}
+.hubafrika-carousel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--storefront-primary, #16a34a);
+    background-color: color-mix(in srgb, var(--storefront-primary, #16a34a) 14%, transparent);
+    border-radius: 9999px;
+    margin-bottom: 1rem;
+}
+.hubafrika-carousel-title {
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1.18;
+    margin-bottom: 1.25rem;
+    color: var(--storefront-text, #111);
+}
+@media (min-width: 640px) {
+    .hubafrika-carousel-title { font-size: 36px; }
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-title { font-size: 46px; }
+}
+.hubafrika-carousel-title strong,
+.hubafrika-carousel-title .accent {
+    font-weight: 700;
+    color: var(--storefront-primary, #16a34a);
+}
+.hubafrika-carousel-desc {
+    font-size: 14px;
+    opacity: 0.75;
+    max-width: 480px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+    .hubafrika-carousel-desc { font-size: 15px; }
+}
+.hubafrika-carousel-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+.hubafrika-carousel-btn-primary {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    background-color: var(--storefront-primary, #16a34a) !important;
+    color: #ffffff !important;
+    padding: 0.75rem 1.75rem !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    border-radius: 0.375rem !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+.hubafrika-carousel-btn-primary:hover {
+    opacity: 0.92 !important;
+    transform: translateY(-1px) !important;
+}
+.hubafrika-carousel-btn-outline {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    border: 1px solid var(--storefront-border, rgba(0, 0, 0, 0.18)) !important;
+    color: var(--storefront-text, #111) !important;
+    padding: 0.75rem 1.5rem !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    border-radius: 0.375rem !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+.hubafrika-carousel-btn-outline:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+.hubafrika-carousel-media {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+}
+@media (min-width: 768px) {
+    .hubafrika-carousel-media { width: 46%; }
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-media { width: 44%; }
+}
+.hubafrika-carousel-card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-card { max-width: none; }
+}
+.hubafrika-carousel-img-wrap {
+    overflow: hidden;
+    border-radius: 1rem;
+    box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--storefront-border, rgba(0, 0, 0, 0.1));
+}
+.hubafrika-carousel-img-wrap img {
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.7s ease;
+}
+@media (min-width: 640px) {
+    .hubafrika-carousel-img-wrap img { height: 300px; }
+}
+@media (min-width: 1024px) {
+    .hubafrika-carousel-img-wrap img { height: 360px; }
+}
+.hubafrika-carousel-card:hover .hubafrika-carousel-img-wrap img {
+    transform: scale(1.05);
+}
+.hubafrika-carousel-overlay {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
+    padding: 0.625rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.hubafrika-carousel-overlay-tag {
+    background-color: var(--storefront-primary, #16a34a);
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.hubafrika-carousel-dots {
+    position: absolute;
+    bottom: 1rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    z-index: 20;
+}
+.hubafrika-carousel-dot {
+    height: 4px;
+    border-radius: 9999px;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.3s ease;
+}
+
+.hubafrika-carousel-slide.is-active {
+    display: flex;
+    animation: hubafrika-carousel-in 0.7s ease-out;
+}
+@keyframes hubafrika-carousel-in {
+    from { opacity: 0; transform: translateX(1.5rem); }
+    to { opacity: 1; transform: translateX(0); }
+}
+.hubafrika-carousel-dot {
+    background-color: var(--storefront-text, #111);
+    width: 1.25rem;
+    opacity: 0.3;
+}
+.hubafrika-carousel-dot.is-active {
+    background-color: var(--storefront-primary, #16a34a);
+    width: 2rem;
+    opacity: 1;
+}
+

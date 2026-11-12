@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Spatie\Permission\Models\Role;
 
 class Customers extends Component
 {
@@ -153,7 +154,9 @@ class Customers extends Component
             $customer->password = Hash::make($validated['password']);
         }
 
-        if (! $customer->exists) {
+        $isNew = ! $customer->exists;
+
+        if ($isNew) {
             $customer->banned = false;
         }
 
@@ -163,6 +166,10 @@ class Customers extends Component
         }
 
         $customer->save();
+
+        if ($isNew && Role::where('name', 'customer')->where('guard_name', 'web')->exists()) {
+            $customer->assignRole('customer');
+        }
 
         session()->flash(
             'message',

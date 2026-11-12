@@ -536,6 +536,8 @@ class DemoDataSeeder extends Seeder
                 'longitude' => 39.2083 - ($index * 0.6),
             ]);
 
+            $user->assignRole('customer');
+
             $this->customers[$row['email']] = $user;
         }
     }

@@ -2,10 +2,16 @@
 
 namespace Tests\Feature\Storefront;
 
+use App\Models\BusinessSetting;
 use App\Models\CmsMenu;
 use App\Models\CmsMenuItem;
 use App\Models\CmsPage;
 use App\Models\User;
+use Database\Seeders\CmsCategorySeeder;
+use Database\Seeders\CmsMenuItemSeeder;
+use Database\Seeders\CmsMenuSeeder;
+use Database\Seeders\CmsPageSeeder;
+use Database\Seeders\CmsPostSeeder;
 use Tests\Feature\Admin\CatalogTestCase;
 
 class StorefrontMenuTest extends CatalogTestCase
@@ -190,10 +196,68 @@ class StorefrontMenuTest extends CatalogTestCase
             ->assertSee('Terms of use')
             ->assertSee('sf-footer-legal', false)
             ->assertSee('sf-news-input', false)
-            ->assertSee('Sign Up');
+            ->assertSee('Sign Up')
+            ->assertSee('sf-footer-main', false)
+            ->assertDontSee('sf-footer-top', false);
 
         // The social link is promoted to the button strip, not repeated as a column link.
         $this->assertSame(1, substr_count($response->getContent(), 'class="sf-social-link"'));
+    }
+
+    public function test_footer_renders_about_us_content_under_the_logo_before_menu_columns(): void
+    {
+        $this->createHomePage();
+
+        BusinessSetting::query()->create([
+            'type' => 'site_motto',
+            'value' => 'Clean energy for Tanzania.',
+            'lang' => null,
+        ]);
+
+        $footer = $this->createMenu('footer', 'footer', [
+            ['label' => 'Navigate'],
+        ]);
+        CmsMenuItem::query()->create([
+            'menu_id' => $footer->id,
+            'label' => 'Installation',
+            'url' => '/pages/installation',
+            'parent_id' => $footer->items()->value('id'),
+        ]);
+
+        // Falls back to site_motto when footer_about is not set yet.
+        $fallbackHtml = $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('sf-footer-about', false)
+            ->assertSee('Clean energy for Tanzania.')
+            ->getContent();
+
+        $this->assertLessThan(
+            strpos($fallbackHtml, 'sf-footer-columns'),
+            strpos($fallbackHtml, 'sf-footer-brand'),
+        );
+        $this->assertLessThan(
+            strpos($fallbackHtml, 'sf-footer-about'),
+            strpos($fallbackHtml, 'sf-footer-logo'),
+        );
+
+        BusinessSetting::query()->create([
+            'type' => 'footer_about',
+            'value' => 'Trusted solar equipment and hybrid storage systems across East Africa.',
+            'lang' => null,
+        ]);
+
+        $customHtml = $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Trusted solar equipment and hybrid storage systems across East Africa.')
+            ->getContent();
+
+        $footerHtml = substr($customHtml, strpos($customHtml, '<footer'));
+
+        $this->assertStringContainsString(
+            'Trusted solar equipment and hybrid storage systems across East Africa.',
+            $footerHtml,
+        );
+        $this->assertStringNotContainsString('Clean energy for Tanzania.', $footerHtml);
     }
 
     public function test_mega_menu_panel_is_centred_under_its_item_and_capped_to_the_navigation_width(): void
@@ -226,6 +290,43 @@ class StorefrontMenuTest extends CatalogTestCase
             ->assertSee('x-ref="mega"', false)
             ->assertSee('placeMega()', false)
             ->assertSee('Installation');
+    }
+
+    public function test_seeded_footer_menu_renders_term_of_use_privacy_policy_and_cookie_policy_in_bottom_bar(): void
+    {
+        User::factory()->create(['id' => 1, 'is_admin' => true]);
+        $this->seed([
+            CmsCategorySeeder::class,
+            CmsPageSeeder::class,
+            CmsPostSeeder::class,
+            CmsMenuSeeder::class,
+            CmsMenuItemSeeder::class,
+        ]);
+
+        $response = $this->get(route('home'));
+
+        $response->assertOk()
+            ->assertSeeInOrder([
+                'class="sf-footer-bottom"',
+                'class="sf-footer-copy"',
+                'class="sf-footer-legal"',
+                '/term-of-use',
+                'Term of use',
+                '/privacy-policy',
+                'Privacy Policy',
+                '/cookie-policy',
+                'Cookie Policy',
+            ], false);
+
+        foreach ([
+            '/term-of-use' => 'Term of use',
+            '/privacy-policy' => 'Privacy Policy',
+            '/cookie-policy' => 'Cookie Policy',
+        ] as $url => $title) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee($title);
+        }
     }
 
     private function createHomePage(): void

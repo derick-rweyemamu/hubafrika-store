@@ -1,4 +1,7 @@
 import Alpine from 'alpinejs';
+import { registerRichEditor } from './rich-editor';
+
+registerRichEditor();
 
 if (!window.Livewire) {
     window.Alpine = Alpine;

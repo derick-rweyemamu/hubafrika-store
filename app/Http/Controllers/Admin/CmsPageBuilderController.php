@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\CmsPage;
 use App\Models\CmsPost;
 use App\Models\Media;
 use App\Support\Media\MediaLibrary;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -43,6 +46,8 @@ class CmsPageBuilderController extends Controller
 
     private function builderView(CmsPage|CmsPost $content, string $entityName, string $adminRoute, string $previewRoute): View
     {
+        abort_unless(auth()->user()?->can('cms.manage'), 403);
+
         $data = $content->builderData();
         $projectData = $data['project_data'] ?? null;
         $initialHtml = $data['html'] ?? $this->legacyHtml($data['blocks']);
@@ -61,7 +66,45 @@ class CmsPageBuilderController extends Controller
             'updateUrl' => route($adminRoute.'.builder.update', $content),
             'previewUrl' => route($previewRoute, $content->slug),
             'uploadUrl' => route('admin.media.upload'),
+            'mediaLibraryUrl' => route('admin.cms.media-library'),
+            'mediaLibraries' => $this->contentLibraryLabels(),
+            'canUploadMedia' => (bool) auth()->user()?->can('media.manage'),
             'assetUrls' => $this->builderAssets($content),
+            'categories' => Category::query()->orderBy('name')->get(['id', 'name', 'slug']),
+            'brands' => Brand::query()->orderBy('name')->get(['id', 'name', 'slug']),
+        ]);
+    }
+
+    /**
+     * Serve searchable, folder-filterable Media Library images to the visual
+     * builder modal so pages and posts can reuse any stored image cleanly.
+     */
+    public function mediaLibrary(Request $request): JsonResponse
+    {
+        abort_unless(auth()->user()?->can('cms.manage'), 403);
+
+        $library = trim((string) $request->query('library', 'all'));
+        $search = trim((string) $request->query('search', ''));
+        $perPage = min(48, max(12, (int) $request->query('per_page', 24)));
+
+        $paginator = Media::query()
+            ->contentImages($library)
+            ->when($search !== '', fn (Builder $query): Builder => $query->search($search))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        return response()->json([
+            'data' => collect($paginator->items())
+                ->map(fn (Media $media): array => $media->toBuilderAsset())
+                ->values()
+                ->all(),
+            'libraries' => $this->contentLibraryLabels(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'total' => $paginator->total(),
+            ],
         ]);
     }
 
@@ -72,24 +115,19 @@ class CmsPageBuilderController extends Controller
      * library, so a picture can be placed by URL instead of being uploaded
      * again for every page that shows it.
      *
-     * @return array<int, array{src: string, name: string}>
+     * @return array<int, array<string, mixed>>
      */
     private function builderAssets(CmsPage|CmsPost $content): array
     {
         $own = $content->getMedia('blocks')
-            ->map(fn (Media $media): array => ['src' => $media->getUrl(), 'name' => $media->file_name]);
+            ->map(fn (Media $media): array => $media->toBuilderAsset());
 
         $library = Media::query()
-            ->where('mime_type', 'like', 'image/%')
-            // Account pictures are never offered for reuse on content.
-            ->whereNotIn('model_type', MediaLibrary::modelsFor(MediaLibrary::USERS))
+            ->contentImages()
             ->orderByDesc('id')
             ->limit(self::LIBRARY_ASSET_LIMIT)
             ->get()
-            ->map(fn (Media $media): array => [
-                'src' => $media->getUrl(),
-                'name' => $media->libraryLabel().' / '.$media->originalFileName(),
-            ]);
+            ->map(fn (Media $media): array => $media->toBuilderAsset());
 
         return $own->concat($library)
             ->unique('src')
@@ -97,8 +135,20 @@ class CmsPageBuilderController extends Controller
             ->all();
     }
 
+    /**
+     * @return array<string, string>
+     */
+    private function contentLibraryLabels(): array
+    {
+        return collect(MediaLibrary::labels())
+            ->except([MediaLibrary::USERS])
+            ->all();
+    }
+
     private function saveBuilderContent(Request $request, CmsPage|CmsPost $content, string $previewRoute): JsonResponse
     {
+        abort_unless(auth()->user()?->can('cms.manage'), 403);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => [

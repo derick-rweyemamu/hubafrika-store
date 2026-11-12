@@ -1,9 +1,6 @@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
     <section class="space-y-5">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Checkout</h1>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Choose how you want to pay. Order prices are in {{ $currency }}.</p>
-        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Choose how you want to pay. Order prices are in {{ $currency }}.</p>
 
         @error('checkout')
             <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
@@ -107,8 +104,8 @@
                         <p class="text-sm text-amber-900 dark:text-amber-100">Account name: <span class="font-semibold">{{ $lipaAccount['business_name'] }}</span></p>
                     @endif
                     <p class="text-sm text-amber-900 dark:text-amber-100">Amount to send: <span class="font-semibold">{{ $currency }} {{ number_format($total, 2) }}</span></p>
-                    @if ($lipaAccount['instructions'] !== '')
-                        <p class="text-sm text-amber-900/90 dark:text-amber-100/90">{{ $lipaAccount['instructions'] }}</p>
+                    @if (\App\Support\RichText::plainText($lipaAccount['instructions']) !== '')
+                        <div class="sf-rich-text sf-rich-text--compact text-sm text-amber-900/90 dark:text-amber-100/90">{!! \App\Support\RichText::toHtml($lipaAccount['instructions']) !!}</div>
                     @endif
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>

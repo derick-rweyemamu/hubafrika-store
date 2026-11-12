@@ -33,6 +33,7 @@
 
         @include('components.layouts.partials.storefront-footer')
     </div>
+    @include('components.layouts.partials.whatsapp-float')
     <x-confirm-dialog />
     @livewireScripts
 </body>

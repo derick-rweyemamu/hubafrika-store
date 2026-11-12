@@ -97,19 +97,21 @@
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">JPG, PNG, or WebP up to 2 MB.</p>
                             @error('logoUpload') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             <div wire:loading wire:target="logoUpload" class="mt-2 text-sm text-gray-500">Uploading logo...</div>
-                            <div class="mt-2 flex flex-wrap items-center gap-2">
-                                <button type="button" wire:click="openMediaPicker('logo')"
-                                        class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-                                    Choose from media
-                                </button>
-                                @foreach ($pickedMediaUrls['logo'] ?? [] as $pickedUrl)
-                                    <span class="relative inline-flex">
-                                        <img src="{{ $pickedUrl }}" alt="Picture picked from the media library" class="h-10 w-10 rounded-lg border border-gray-200 object-contain dark:border-gray-700">
-                                        <button type="button" wire:click="clearPickedMedia('logo')" aria-label="Remove picked logo"
-                                                class="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold text-white">&times;</button>
-                                    </span>
-                                @endforeach
-                            </div>
+                            @if (auth()->user()?->can('media.view'))
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <button type="button" wire:click="openMediaPicker('logo')"
+                                            class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                                        Choose from media
+                                    </button>
+                                    @foreach ($pickedMediaUrls['logo'] ?? [] as $pickedUrl)
+                                        <span class="relative inline-flex">
+                                            <img src="{{ $pickedUrl }}" alt="Picture picked from the media library" class="h-10 w-10 rounded-lg border border-gray-200 object-contain dark:border-gray-700">
+                                            <button type="button" wire:click="clearPickedMedia('logo')" aria-label="Remove picked logo"
+                                                    class="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold text-white">&times;</button>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                             @if ($logoUpload)
                                 <img src="{{ $logoUpload->temporaryUrl() }}" alt="Selected brand logo" class="mt-3 h-16 w-16 rounded-lg object-contain">
                             @elseif ($currentLogo)
@@ -130,7 +132,7 @@
         </div>
     @endif
 
-    @if ($mediaPickerOpen)
+    @if ($mediaPickerOpen && auth()->user()?->can('media.view'))
         <livewire:admin.media-picker />
     @endif
 </div>

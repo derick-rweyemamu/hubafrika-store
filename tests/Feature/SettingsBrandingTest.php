@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Livewire\Admin\Settings;
+use App\Mail\OrderPlacedMail;
 use App\Models\BusinessSetting;
 use App\Models\CmsPage;
+use App\Models\Order;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -522,5 +525,126 @@ class SettingsBrandingTest extends TestCase
             'type' => 'flat_rate_shipping_cost',
             'value' => '5000',
         ]);
+    }
+
+    public function test_admin_can_update_footer_about_us_setting(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        BusinessSetting::create([
+            'type' => 'footer_about',
+            'value' => 'Initial company summary.',
+            'lang' => null,
+        ]);
+
+        Livewire::test(Settings::class)
+            ->assertSee('general-setting-card-footer_about', false)
+            ->assertSee('Footer about us')
+            ->call('edit', 'footer_about')
+            ->assertSet('value', 'Initial company summary.')
+            ->assertSee('Shown below the logo on the left side of the storefront footer.')
+            ->set('value', 'Trusted solar panels and batteries in Arusha.')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('business_settings', [
+            'type' => 'footer_about',
+            'value' => 'Trusted solar panels and batteries in Arusha.',
+        ]);
+    }
+
+    public function test_footer_about_us_uses_rich_editor_sanitizes_html_and_renders_safely_on_storefront(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+        $this->seedHomePage();
+
+        BusinessSetting::create([
+            'type' => 'footer_about',
+            'value' => 'Initial plain summary.',
+            'lang' => null,
+        ]);
+
+        Livewire::test(Settings::class)
+            ->call('edit', 'footer_about')
+            ->assertSee('id="setting-value"', false)
+            ->assertSee('role="toolbar"', false)
+            ->set('value', '<h2>HubAfrika Energy</h2><p>Trusted <strong>solar</strong> installers.<script>alert(1)</script></p><p><a href="https://example.com/about">About</a> <a href="javascript:evil()">Bad</a></p>')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSee('Trusted solar installers.')
+            ->assertDontSee('<h2>HubAfrika Energy</h2>', false);
+
+        $stored = (string) BusinessSetting::query()->where('type', 'footer_about')->value('value');
+
+        $this->assertStringContainsString('<h2>HubAfrika Energy</h2>', $stored);
+        $this->assertStringContainsString('<strong>solar</strong>', $stored);
+        $this->assertStringContainsString('<a href="https://example.com/about"', $stored);
+        $this->assertStringNotContainsString('<script', $stored);
+        $this->assertStringNotContainsString('javascript:', $stored);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('class="sf-footer-about"', false)
+            ->assertSee('<h2>HubAfrika Energy</h2>', false)
+            ->assertSee('<strong>solar</strong>', false)
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertDontSee('alert(1)');
+    }
+
+    public function test_lipa_instructions_rejects_empty_rich_editor_html_and_renders_sanitized_html_in_order_mail(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        BusinessSetting::create([
+            'type' => 'lipa_number',
+            'value' => '5551234',
+            'lang' => null,
+        ]);
+
+        BusinessSetting::create([
+            'type' => 'lipa_instructions',
+            'value' => 'Initial payment instructions.',
+            'lang' => null,
+        ]);
+
+        Livewire::test(Settings::class)
+            ->call('selectTab', 'shipping-checkout')
+            ->call('edit', 'lipa_instructions')
+            ->assertSee('id="setting-value"', false)
+            ->assertSee('role="toolbar"', false)
+            ->set('value', '<p><br></p>')
+            ->call('save')
+            ->assertHasErrors('value')
+            ->set('value', '<ol><li>Dial <strong>*150*00#</strong></li><li>Confirm merchant code<script>alert(1)</script></li></ol>')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $stored = (string) BusinessSetting::query()->where('type', 'lipa_instructions')->value('value');
+
+        $this->assertStringContainsString('<ol>', $stored);
+        $this->assertStringContainsString('<strong>*150*00#</strong>', $stored);
+        $this->assertStringNotContainsString('<script', $stored);
+
+        $order = Order::query()->create([
+            'order_number' => 'ORD-LIPA-9001',
+            'customer_name' => 'Asha Juma',
+            'customer_email' => 'asha@example.com',
+            'payment_method' => Payment::METHOD_VODACOM_LIPA,
+            'payment_status' => 'awaiting_verification',
+            'currency' => 'TZS',
+            'subtotal' => 150000,
+            'total' => 150000,
+            'shipping_address' => 'Plot 12, Njiro Road',
+        ]);
+
+        $renderedMail = (new OrderPlacedMail($order))->render();
+
+        $this->assertStringContainsString('<ol', $renderedMail);
+        $this->assertStringContainsString('<li', $renderedMail);
+        $this->assertStringContainsString('<strong', $renderedMail);
+        $this->assertStringContainsString('*150*00#', $renderedMail);
+        $this->assertStringContainsString('Confirm merchant code', $renderedMail);
+        $this->assertStringNotContainsString('<script', $renderedMail);
+        $this->assertStringNotContainsString('alert(1)', $renderedMail);
     }
 }

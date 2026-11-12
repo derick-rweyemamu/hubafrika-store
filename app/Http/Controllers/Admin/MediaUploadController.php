@@ -9,6 +9,7 @@ use App\Models\MediaShelf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Spatie\MediaLibrary\HasMedia;
 
 /**
@@ -22,7 +23,9 @@ class MediaUploadController extends Controller
         abort_unless($request->user()?->can('media.manage'), 403);
 
         $validated = $request->validate([
-            'file' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
+            'file' => ['required_without:files', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
+            'files' => ['required_without:file', 'array', 'min:1', 'max:10'],
+            'files.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
             'owner_type' => ['nullable', 'in:page,post,shelf'],
             'owner_id' => ['nullable', 'integer'],
         ]);
@@ -41,15 +44,25 @@ class MediaUploadController extends Controller
             default => ['library', 'uploads'],
         };
 
-        $media = $owner->addLibraryMedia($request->file('file'), $collection, $folder);
+        $uploadedFiles = [];
+
+        if ($request->hasFile('file')) {
+            $uploadedFiles[] = $request->file('file');
+        }
+
+        foreach ($request->file('files', []) as $file) {
+            if ($file instanceof UploadedFile) {
+                $uploadedFiles[] = $file;
+            }
+        }
+
+        $data = array_map(
+            fn (UploadedFile $file): array => $owner->addLibraryMedia($file, $collection, $folder)->toBuilderAsset(),
+            $uploadedFiles,
+        );
 
         return response()->json([
-            'data' => [[
-                'src' => $media->getUrl(),
-                'name' => $media->file_name,
-                'type' => 'image',
-                'id' => $media->getKey(),
-            ]],
+            'data' => $data,
         ]);
     }
 

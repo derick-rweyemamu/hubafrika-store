@@ -475,7 +475,7 @@
                 <div class="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-300/80 dark:border-amber-700/60 space-y-2.5">
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 uppercase tracking-wider">
-                            <i class="fas fa-columns text-amber-500"></i> {{ __('Assign to Mega Menu Column') }} <span class="text-rose-500">*</span>
+                            <i class="fas fa-columns text-amber-500"></i> {{ __('Mega-menu column') }} <span class="text-rose-500">*</span>
                         </label>
                         <span class="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
                             {{ $selectedParent->title }} ({{ $selectedParent->mega_menu_columns }} {{ __('cols') }})
@@ -493,6 +493,31 @@
                     <p class="text-[11px] text-amber-800/80 dark:text-amber-300/80">
                         {{ __('This link will be shown in') }} <strong>{{ __('Column') }} {{ $item_mega_column }}</strong> {{ __('of the mega menu layout.') }}
                     </p>
+                </div>
+                @elseif(!$item_parent_id)
+                <!-- Mega Menu Settings for Root Items -->
+                <div class="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60 space-y-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" wire:model.live="item_is_mega_menu" class="rounded border-slate-300 text-amber-500 focus:ring-amber-400">
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <i class="fas fa-th-large text-amber-500"></i> {{ __('Enable multi-column mega menu dropdown') }}
+                        </span>
+                    </label>
+
+                    @if($item_is_mega_menu)
+                    <div class="pt-2 border-t border-amber-200/60 dark:border-amber-800/40">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                            {{ __('Number of columns') }}
+                        </label>
+                        <select wire:model="item_mega_menu_columns" class="w-full h-10 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                            <option value="2">2 {{ __('Columns') }}</option>
+                            <option value="3">3 {{ __('Columns') }}</option>
+                            <option value="4">4 {{ __('Columns') }}</option>
+                            <option value="5">5 {{ __('Columns') }}</option>
+                            <option value="6">6 {{ __('Columns') }}</option>
+                        </select>
+                    </div>
+                    @endif
                 </div>
                 @endif
 
@@ -617,8 +642,11 @@
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                         {{ __('Custom URL Path') }} <span class="text-rose-500">*</span>
                     </label>
-                    <input wire:model="item_url" type="text" placeholder="/shop or /about or https://example.com"
+                    <input wire:model="item_url" type="text" placeholder="# or #section or /shop or https://example.com"
                         class="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 text-sm font-mono">
+                    <span class="text-[11px] text-slate-400 mt-1 block">
+                        {{ __('Accepts # (placeholder/dropdown link), #section (page anchor), /path (internal route), or https://... (external URL).') }}
+                    </span>
                     @error('item_url') <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
                 @elseif($item_type === 'image')
@@ -665,18 +693,20 @@
                             class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-white hover:file:bg-amber-600 cursor-pointer">
                         <p class="text-[10px] text-slate-400 mt-1">{{ __('PNG, JPG, WebP up to 3MB. Displayed prominently as a visual card inside the mega menu column.') }}</p>
                         @error('item_image') <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span> @enderror
-                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                            <button type="button" wire:click="openMediaPicker('item_image')"
-                                class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                                {{ __('Choose from Media') }}
-                            </button>
-                            @if (($pickedMediaUrls['item_image'][0] ?? null) !== null)
-                                <button type="button" wire:click="clearPickedMedia('item_image')"
-                                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
-                                    {{ __('Clear Picked Image') }}
+                        @if (auth()->user()?->can('media.view'))
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <button type="button" wire:click="openMediaPicker('item_image')"
+                                    class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                                    {{ __('Choose from Media') }}
                                 </button>
-                            @endif
-                        </div>
+                                @if (($pickedMediaUrls['item_image'][0] ?? null) !== null)
+                                    <button type="button" wire:click="clearPickedMedia('item_image')"
+                                        class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                                        {{ __('Clear Picked Image') }}
+                                    </button>
+                                @endif
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Image Card Destination Link -->
@@ -822,11 +852,11 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                    <label for="cms-menu-description" class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
                         {{ __('Description') }}
                     </label>
-                    <textarea wire:model="menu_description" rows="2" placeholder="Optional notes on where this menu is placed..."
-                        class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900 text-slate-800 dark:text-slate-200"></textarea>
+                    <x-rich-editor id="cms-menu-description" wire:model="menu_description" :compact="true" min-height="85px" placeholder="Optional notes on where this menu is placed..." />
+                    @error('menu_description') <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span> @enderror
                 </div>
             </div>
 
@@ -936,7 +966,7 @@
                 @else
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-{{ min(count($mega_columns), 4) }} gap-5 items-start">
                     @foreach($mega_columns as $colIndex => $col)
-                    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col justify-between transition hover:border-slate-300 dark:hover:border-slate-700">
+                    <div wire:key="mega-builder-col-{{ $colIndex }}-{{ $col['type'] ?? 'links' }}" class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col justify-between transition hover:border-slate-300 dark:hover:border-slate-700">
                         <div class="p-5 space-y-4">
                             <!-- Column Top Action Bar -->
                             <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -1143,11 +1173,10 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                                    <label for="mega-promo-content-{{ $colIndex }}" class="block text-[10px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
                                         {{ __('Promo Body Content') }}
                                     </label>
-                                    <textarea wire:model="mega_columns.{{ $colIndex }}.content" rows="3" placeholder="Shop the new seasonal arrivals and get up to 20% discount on first orders..."
-                                        class="w-full p-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200"></textarea>
+                                    <x-rich-editor id="mega-promo-content-{{ $colIndex }}" wire:model="mega_columns.{{ $colIndex }}.content" :compact="true" min-height="95px" placeholder="Shop the new seasonal arrivals and get up to 20% discount on first orders..." />
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-2">
@@ -1332,7 +1361,9 @@
                                     <img src="{{ str_starts_with($mCol['image'], 'http') ? $mCol['image'] : asset($mCol['image']) }}" alt="" class="w-full h-full object-cover">
                                 </div>
                                 @endif
-                                <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{{ $mCol['content'] }}</p>
+                                @if (\App\Support\RichText::plainText($mCol['content'] ?? '') !== '')
+                                <div class="sf-rich-text sf-rich-text--compact text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{!! \App\Support\RichText::toHtml($mCol['content']) !!}</div>
+                                @endif
                                 @if(!empty($mCol['button_label']))
                                 <a href="{{ $mCol['button_url'] ?: '#' }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition">
                                     <span>{{ $mCol['button_label'] }}</span>
@@ -1393,7 +1424,7 @@
     </div>
     @endif
 
-    @if ($mediaPickerOpen)
+    @if ($mediaPickerOpen && auth()->user()?->can('media.view'))
         <livewire:admin.media-picker />
     @endif
 </div>

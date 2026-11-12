@@ -22,6 +22,12 @@ class MyOrders extends Component
                 ->latest()
                 ->paginate(10),
             'lipaAccount' => Payment::lipaAccount(),
-        ])->layout('components.layouts.storefront', ['title' => 'My orders', 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'My orders',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'My orders',
+            ],
+        ]);
     }
 }

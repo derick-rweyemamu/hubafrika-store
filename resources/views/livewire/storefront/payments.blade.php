@@ -11,10 +11,7 @@
 @endphp
 
 <div class="pf-page space-y-6">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ __('My payments') }}</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ __('Every payment recorded on your orders, newest first.') }}</p>
-    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-400">{{ __('Every payment recorded on your orders, newest first.') }}</p>
 
     <x-account-tabs active="payments" />
 

@@ -100,13 +100,6 @@ class MediaPicker extends Component
 
     private function query(): Builder
     {
-        return Media::query()
-            ->where('mime_type', 'like', 'image/%')
-            ->when(
-                $this->library === 'all',
-                // Account pictures are never offered for reuse on content.
-                fn (Builder $query) => $query->whereNotIn('model_type', MediaLibrary::modelsFor(MediaLibrary::USERS)),
-                fn (Builder $query) => $query->forLibrary($this->library),
-            );
+        return Media::query()->contentImages($this->library);
     }
 }

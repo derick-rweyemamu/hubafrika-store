@@ -11,6 +11,12 @@
         'profile-updated' => __('Your profile has been updated.'),
         'password-updated' => __('Your password has been updated.'),
         'verification-link-sent' => __('A new verification link has been sent to your email address.'),
+        'two-factor-setup-started' => __('Scan the QR code below and enter a code from your authenticator app to activate two-factor authentication.'),
+        'two-factor-enabled' => __('Two-factor authentication is now enabled on your account.'),
+        'two-factor-disabled' => __('Two-factor authentication has been disabled.'),
+        'two-factor-setup-cancelled' => __('Two-factor authentication setup was cancelled.'),
+        'two-factor-recovery-sent' => __('A single-use recovery code has been sent to your registered email address.'),
+        'two-factor-recovered' => __('Signed in using your registered email recovery code. Visit Security settings if you need to reset your authenticator app.'),
     ];
 
     $toasts = [];
@@ -27,14 +33,19 @@
             'text' => $key === 'status' ? ($statusMessages[$text] ?? $text) : $text,
         ];
     }
+    $renderKey = $toasts === [] ? null : bin2hex(random_bytes(6));
 @endphp
 
 @if ($toasts !== [])
     <div class="pointer-events-none fixed inset-x-3 top-3 z-[9990] flex flex-col items-stretch gap-2 sm:inset-x-auto sm:right-5 sm:top-5 sm:w-full sm:max-w-sm">
         @foreach ($toasts as $toast)
             <div
-                x-data="{ visible: false }"
-                x-init="$nextTick(() => visible = true); setTimeout(() => visible = false, 6000)"
+                wire:key="flash-toast-{{ $renderKey }}-{{ $loop->index }}"
+                x-data="{ visible: false, timer: null }"
+                x-init="
+                    $nextTick(() => { visible = true; });
+                    timer = setTimeout(() => { visible = false; }, 6000);
+                "
                 x-show="visible"
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 sm:translate-x-6 translate-y-0"
@@ -63,7 +74,7 @@
                 <p class="min-w-0 flex-1 pt-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ $toast['text'] }}</p>
                 <button
                     type="button"
-                    x-on:click="visible = false"
+                    x-on:click="clearTimeout(timer); visible = false"
                     aria-label="Dismiss notification"
                     class="rounded p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                 >

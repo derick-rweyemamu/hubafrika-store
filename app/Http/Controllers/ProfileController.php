@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\BusinessSetting;
 use App\Models\User;
+use App\Support\Auth\QrCodeSvg;
+use App\Support\Auth\Totp;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,9 +42,23 @@ class ProfileController extends Controller
             ->take(5)
             ->get();
 
+        $activeTab = $this->activeTab($request);
+        $twoFactorQrSvg = null;
+        $twoFactorFormattedSecret = null;
+
+        if ($activeTab === 'security' && $user->hasPendingTwoFactorSetup()) {
+            $issuer = trim((string) BusinessSetting::query()->where('type', 'site_name')->value('value'));
+            $issuer = $issuer !== '' ? $issuer : (string) config('app.name', 'Hubafrika Shop');
+            $secret = (string) $user->two_factor_secret;
+            $accountName = filled($user->email) ? (string) $user->email : (string) $user->name;
+
+            $twoFactorQrSvg = QrCodeSvg::render(Totp::provisioningUri($issuer, $accountName, $secret));
+            $twoFactorFormattedSecret = Totp::formatSecret($secret);
+        }
+
         return view('profile.edit', [
             'user' => $user,
-            'activeTab' => $this->activeTab($request),
+            'activeTab' => $activeTab,
             'summary' => $this->purchaseSummary($user),
             'recentOrders' => $recentOrders,
             'addresses' => $user->addresses()
@@ -51,6 +67,8 @@ class ProfileController extends Controller
                 ->get(),
             'currency' => $recentOrders->first()?->currency ?? $this->storeCurrency(),
             'avatarUrl' => $this->avatarUrl($user),
+            'twoFactorQrSvg' => $twoFactorQrSvg,
+            'twoFactorFormattedSecret' => $twoFactorFormattedSecret,
         ]);
     }
 
@@ -72,6 +90,8 @@ class ProfileController extends Controller
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
             $user->verification_status = 0;
+            $user->two_factor_email_code_hash = null;
+            $user->two_factor_email_code_expires_at = null;
         }
 
         $user->save();
@@ -120,7 +140,12 @@ class ProfileController extends Controller
         $errors = $request->session()->get('errors');
 
         if ($errors instanceof ViewErrorBag) {
-            if ($errors->getBag('userDeletion')->isNotEmpty() || $errors->getBag('updatePassword')->isNotEmpty()) {
+            if (
+                $errors->getBag('userDeletion')->isNotEmpty()
+                || $errors->getBag('updatePassword')->isNotEmpty()
+                || $errors->getBag('twoFactorConfirm')->isNotEmpty()
+                || $errors->getBag('twoFactorDisable')->isNotEmpty()
+            ) {
                 return 'security';
             }
 
@@ -129,7 +154,15 @@ class ProfileController extends Controller
             }
         }
 
-        return $request->session()->get('status') === 'password-updated' ? 'security' : 'info';
+        $securityStatuses = [
+            'password-updated',
+            'two-factor-setup-started',
+            'two-factor-enabled',
+            'two-factor-disabled',
+            'two-factor-setup-cancelled',
+        ];
+
+        return in_array($request->session()->get('status'), $securityStatuses, true) ? 'security' : 'info';
     }
 
     /**

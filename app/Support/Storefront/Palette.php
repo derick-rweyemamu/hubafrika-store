@@ -66,6 +66,16 @@ class Palette
      */
     public static function primary(): string
     {
+        return self::frontend()['primary'];
+    }
+
+    /**
+     * The whole active storefront palette.
+     *
+     * @return array<string, string>
+     */
+    public static function frontend(): array
+    {
         $settings = BusinessSetting::query()
             ->whereIn('type', [
                 'frontend_palette_active',
@@ -73,6 +83,26 @@ class Palette
             ])
             ->pluck('value', 'type');
 
-        return self::resolve($settings, 'frontend', self::FRONTEND)['primary'];
+        return self::resolve($settings, 'frontend', self::FRONTEND);
+    }
+
+    /**
+     * The CSS font stack the admin picked for the storefront body text.
+     */
+    public static function bodyFont(): string
+    {
+        $families = [
+            'Inter' => 'Inter, sans-serif',
+            'Arial' => 'Arial, sans-serif',
+            'Georgia' => 'Georgia, serif',
+            'System' => 'system-ui, sans-serif',
+            'Poppins' => 'Poppins, sans-serif',
+            'Playfair Display' => '"Playfair Display", serif',
+            'Plus Jakarta Sans' => '"Plus Jakarta Sans", sans-serif',
+        ];
+
+        $chosen = (string) BusinessSetting::query()->where('type', 'font_frontend_body')->value('value');
+
+        return $families[$chosen] ?? $families['Inter'];
     }
 }

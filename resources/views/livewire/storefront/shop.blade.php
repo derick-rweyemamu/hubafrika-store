@@ -6,12 +6,9 @@
 
 <div class="shop-page">
     <header class="shop-head">
-        <div>
-            <h1 class="shop-title">Shop</h1>
-            <p class="shop-sub">
-                {{ $products->total() }} {{ Str::plural('product', $products->total()) }} available · Prices in {{ $currency }}
-            </p>
-        </div>
+        <p class="shop-sub">
+            {{ $products->total() }} {{ Str::plural('product', $products->total()) }} available · Prices in {{ $currency }}
+        </p>
 
         <input type="search" wire:model.live.debounce.300ms="search" placeholder="Search products..."
                aria-label="Search products" class="shop-search">

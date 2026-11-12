@@ -108,6 +108,16 @@ class AppServiceProvider extends ServiceProvider
                     'font_size_small',
                     'site_name',
                     'site_motto',
+                    'footer_about',
+                    'contact_email',
+                    'contact_phone',
+                    'whatsapp_number',
+                    'social_facebook',
+                    'social_instagram',
+                    'social_x',
+                    'social_youtube',
+                    'social_linkedin',
+                    'social_tiktok',
                     'business_logo',
                     'business_logo_dark',
                     'favicon',
@@ -195,7 +205,7 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * @param  Collection<string, string>  $settings
-     * @return array{site_name: ?string, site_motto: ?string, logo: ?string, logoDark: ?string, favicon: ?string}
+     * @return array{site_name: ?string, site_motto: ?string, footer_about: ?string, logo: ?string, logoDark: ?string, favicon: ?string}
      */
     private function businessAssets(Collection $settings): array
     {
@@ -207,12 +217,107 @@ class AppServiceProvider extends ServiceProvider
             ->get()
             ->keyBy('type');
 
+        $email = trim((string) $settings->get('contact_email', ''));
+        $validEmail = $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : null;
+        $phone = trim((string) $settings->get('contact_phone', ''));
+        $phoneHref = $this->normalizePhoneHref($phone);
+
         return [
             'site_name' => $settings->get('site_name'),
             'site_motto' => $settings->get('site_motto'),
+            'footer_about' => $settings->get('footer_about'),
             'logo' => $branding->get('business_logo')?->imageUrl(),
             'logoDark' => $branding->get('business_logo_dark')?->imageUrl(),
             'favicon' => $branding->get('favicon')?->imageUrl(),
+            'contact' => [
+                'email' => $validEmail,
+                'emailHref' => $validEmail !== null ? 'mailto:'.$validEmail : null,
+                'phone' => $phoneHref !== null ? $phone : null,
+                'phoneHref' => $phoneHref,
+                'whatsappHref' => $this->normalizeWhatsappHref($settings->get('whatsapp_number')),
+            ],
+            'socials' => $this->storefrontSocialLinks($settings),
         ];
+    }
+
+    private function normalizePhoneHref(mixed $raw): ?string
+    {
+        $phone = trim((string) ($raw ?? ''));
+        if ($phone === '') {
+            return null;
+        }
+
+        $hasLeadingPlus = str_starts_with($phone, '+');
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if (strlen($digits) < 5) {
+            return null;
+        }
+
+        return 'tel:'.($hasLeadingPlus ? '+' : '').$digits;
+    }
+
+    private function normalizeWhatsappHref(mixed $raw): ?string
+    {
+        $value = trim((string) ($raw ?? ''));
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/\Ahttps?:\/\//i', $value) === 1) {
+            $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+            if (filter_var($value, FILTER_VALIDATE_URL) !== false && in_array($scheme, ['http', 'https'], true)) {
+                return $value;
+            }
+
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $value) ?? '';
+        if (strlen($digits) < 7 || strlen($digits) > 15) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$digits;
+    }
+
+    /**
+     * Build ordered external social links from configured business settings.
+     *
+     * @param  Collection<string, mixed>  $settings
+     * @return array<int, array{label: string, href: string, icon: string, external: bool, social: bool}>
+     */
+    private function storefrontSocialLinks(Collection $settings): array
+    {
+        $networks = [
+            'social_facebook' => ['label' => 'Facebook', 'icon' => 'facebook'],
+            'social_instagram' => ['label' => 'Instagram', 'icon' => 'instagram'],
+            'social_x' => ['label' => 'X (Twitter)', 'icon' => 'x'],
+            'social_youtube' => ['label' => 'YouTube', 'icon' => 'youtube'],
+            'social_linkedin' => ['label' => 'LinkedIn', 'icon' => 'linkedin'],
+            'social_tiktok' => ['label' => 'TikTok', 'icon' => 'tiktok'],
+        ];
+
+        $links = [];
+        foreach ($networks as $type => $meta) {
+            $url = trim((string) ($settings->get($type) ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+            if (filter_var($url, FILTER_VALIDATE_URL) === false || ! in_array($scheme, ['http', 'https'], true)) {
+                continue;
+            }
+
+            $links[] = [
+                'label' => $meta['label'],
+                'href' => $url,
+                'icon' => $meta['icon'],
+                'external' => true,
+                'social' => true,
+            ];
+        }
+
+        return $links;
     }
 }

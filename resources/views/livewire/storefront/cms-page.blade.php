@@ -5,7 +5,7 @@
             title="{{ $page->title }}"
             sandbox="allow-scripts"
             srcdoc="{{ $builderDocument }}"
-            class="w-full border-0"
+            scrolling="no" class="block w-full border-0"
             style="height: 85vh; min-height: 640px;"
         ></iframe>
         <script>
@@ -32,7 +32,11 @@
                     }
 
                     if (['http:', 'https:'].includes(destination.protocol)) {
-                        window.location.assign(destination.href);
+                        if (event.data.target === '_blank') {
+                            window.open(destination.href, '_blank', 'noopener,noreferrer');
+                        } else {
+                            window.location.assign(destination.href);
+                        }
                     }
 
                     return;

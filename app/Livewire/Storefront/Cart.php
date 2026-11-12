@@ -67,6 +67,15 @@ class Cart extends Component
         return view('livewire.storefront.cart', [
             'cartItems' => CartSession::query()->with('product')->orderBy('id')->get(),
             'currency' => BusinessSetting::query()->where('type', 'currency_code')->value('value') ?? 'USD',
-        ])->layout('components.layouts.storefront', ['title' => 'Your cart', 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'Your cart',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'Your cart',
+                'parents' => [
+                    ['label' => 'Shop', 'url' => route('shop')],
+                ],
+            ],
+        ]);
     }
 }

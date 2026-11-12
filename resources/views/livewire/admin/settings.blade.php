@@ -275,7 +275,7 @@
                                 </article>
                             @endforeach
                         </div>
-                    @elseif ($group === 'Basic settings')
+                    @elseif (in_array($group, ['Basic settings', 'Contact & social'], true))
                         <div class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
                             @foreach ($settings as $setting)
                                 @continue($setting['type'] === 'maintenance_mode')
@@ -283,7 +283,7 @@
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="min-w-0">
                                             <span class="admin-primary-soft-bg admin-primary-text inline-flex max-w-full truncate rounded-full px-3 py-1 text-xs font-medium">
-                                                {{ $group === 'Store status' ? 'Store status' : 'General' }}
+                                                {{ $group === 'Basic settings' ? 'General' : $group }}
                                             </span>
                                             <h5 class="mt-3 truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ $setting['label'] }}</h5>
                                         </div>
@@ -574,44 +574,62 @@
                                 @error('upload') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button type="button" wire:click="openMediaPicker('branding')"
-                                        class="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-                                    Choose from media
-                                </button>
-                                @if (($pickedMediaUrls['branding'][0] ?? null) !== null)
-                                    <button type="button" wire:click="clearPickedMedia('branding')"
-                                            class="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
-                                        Clear picked image
+                            @if (auth()->user()?->can('media.view'))
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button" wire:click="openMediaPicker('branding')"
+                                            class="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                                        Choose from media
                                     </button>
-                                @endif
-                            </div>
+                                    @if (($pickedMediaUrls['branding'][0] ?? null) !== null)
+                                        <button type="button" wire:click="clearPickedMedia('branding')"
+                                                class="rounded-md border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-500 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800">
+                                            Clear picked image
+                                        </button>
+                                    @endif
+                                </div>
+                            @endif
 
                             <p wire:loading wire:target="upload" class="text-sm text-gray-500 dark:text-gray-400">Uploading image…</p>
                         </div>
                     @elseif ($settingKind === 'textarea')
                         <div>
                             <label for="setting-value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Value</label>
-                            <textarea id="setting-value" rows="5" wire:model="value"
-                                      class="admin-primary-focus mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-800"></textarea>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Shown to the customer on the checkout page and their order.</p>
+                            <div class="mt-1">
+                                <x-rich-editor
+                                    id="setting-value"
+                                    wire:model="value"
+                                    :placeholder="$settingType === 'footer_about'
+                                        ? 'Share a short company overview for the storefront footer...'
+                                        : 'Explain how customers should complete Vodacom Lipa payment...'"
+                                />
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {{ $settingType === 'footer_about' ? 'Shown below the logo on the left side of the storefront footer.' : 'Shown to the customer on the checkout page and their order.' }}
+                            </p>
                             @error('value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                     @elseif ($settingType)
                         <div>
                             <label for="setting-value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ $settingKind === 'font_size' ? 'Font size' : 'Value' }}</label>
-                            <input id="setting-value" type="{{ $settingKind === 'secret' ? 'password' : 'text' }}" wire:model="value" autocomplete="off"
+                            <input id="setting-value" type="{{ match ($settingKind) { 'secret' => 'password', 'email' => 'email', 'url' => 'url', 'phone' => 'tel', default => 'text' } }}" wire:model="value" autocomplete="off"
                                    @if (in_array($settingKind, ['country', 'palette_selection', 'lipa_number'], true)) inputmode="numeric" @endif
                                    @if ($settingKind === 'decimal') inputmode="decimal" @endif
+                                   @if ($settingKind === 'phone') inputmode="tel" @endif
                                    class="admin-primary-focus mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                             @if ($settingKind === 'font_size')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Use a CSS size such as 16px, 1rem, 1.25em, or 100%.</p>
-                            @endif
-                            @if ($settingKind === 'lipa_number')
+                            @elseif ($settingKind === 'lipa_number')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">The 5 to 9 digit merchant number customers pay into. Lipa is only offered at checkout when this is set.</p>
-                            @endif
-                            @if ($settingKind === 'secret')
+                            @elseif ($settingKind === 'secret')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used to verify the Vodacom callback signature. Leave empty to keep the callback disabled.</p>
+                            @elseif ($settingKind === 'email')
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed on the left side of the top bar as a mailto link. Leave empty to hide.</p>
+                            @elseif ($settingKind === 'phone')
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed on the left side of the top bar as a clickable phone link. Leave empty to hide.</p>
+                            @elseif ($settingKind === 'whatsapp')
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Shown as a floating WhatsApp icon at the bottom of storefront pages (enter a phone number with country code or a https://wa.me link). Leave empty to hide.</p>
+                            @elseif ($settingKind === 'url')
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Full https:// link shown below the About Us content in the storefront footer. Leave empty to hide.</p>
                             @endif
                             @error('value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
@@ -632,7 +650,7 @@
         </div>
     @endif
 
-    @if ($mediaPickerOpen)
+    @if ($mediaPickerOpen && auth()->user()?->can('media.view'))
         <livewire:admin.media-picker />
     @endif
 </div>

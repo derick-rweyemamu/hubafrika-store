@@ -185,27 +185,42 @@ class CmsMenuItem extends Model implements HasMedia
 
     public static function isSafeUrl(string $url): bool
     {
+        $trimmed = trim($url);
+
+        if ($trimmed === '') {
+            return true;
+        }
+
+        // Allow hash '#' and anchor fragments e.g. '#', '#home', '#about-us', '#contact'
         if (
-            str_starts_with($url, '/')
-            && ! str_starts_with($url, '//')
-            && ! str_contains($url, '\\')
-            && preg_match('/[\s\x00-\x1F]/', $url) !== 1
+            str_starts_with($trimmed, '#')
+            && ! str_contains($trimmed, '\\')
+            && preg_match('/[\s\x00-\x1F]/', $trimmed) !== 1
+        ) {
+            return true;
+        }
+
+        if (
+            str_starts_with($trimmed, '/')
+            && ! str_starts_with($trimmed, '//')
+            && ! str_contains($trimmed, '\\')
+            && preg_match('/[\s\x00-\x1F]/', $trimmed) !== 1
         ) {
             return true;
         }
 
         // Contact links used by the storefront footer: a phone number for
         // tel: and a plain address for mailto:, nothing else.
-        if (preg_match('/\Atel:\+?[0-9][0-9\s().-]{4,24}\z/i', $url) === 1) {
+        if (preg_match('/\Atel:\+?[0-9][0-9\s().-]{4,24}\z/i', $trimmed) === 1) {
             return true;
         }
 
-        if (preg_match('/\Amailto:([^?@\s]+@[^?@\s]+\.[a-z]{2,})\z/i', $url, $matches) === 1) {
+        if (preg_match('/\Amailto:([^?@\s]+@[^?@\s]+\.[a-z]{2,})\z/i', $trimmed, $matches) === 1) {
             return filter_var($matches[1], FILTER_VALIDATE_EMAIL) !== false;
         }
 
-        $scheme = parse_url($url, PHP_URL_SCHEME);
+        $scheme = parse_url($trimmed, PHP_URL_SCHEME);
 
-        return in_array($scheme, ['http', 'https'], true) && filter_var($url, FILTER_VALIDATE_URL) !== false;
+        return in_array($scheme, ['http', 'https'], true) && filter_var($trimmed, FILTER_VALIDATE_URL) !== false;
     }
 }

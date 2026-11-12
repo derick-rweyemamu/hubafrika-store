@@ -23,6 +23,16 @@ class OnlineUsers extends Component
      */
     private const WINDOW_MINUTES = 5;
 
+    public function boot(): void
+    {
+        $user = auth()->user();
+
+        abort_unless(
+            $user !== null && ($user->isAdmin() || $user->getAllPermissions()->isNotEmpty()),
+            403,
+        );
+    }
+
     public function render()
     {
         [$usersOnline, $staffOnline] = $this->counts();

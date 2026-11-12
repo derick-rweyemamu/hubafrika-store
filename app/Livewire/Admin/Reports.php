@@ -20,6 +20,11 @@ class Reports extends Component
 {
     use DrawsCharts;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('reports.view'), 403);
+    }
+
     /** Report screens, in the order the tabs are shown. */
     public const TABS = [
         'sales' => 'Sales',

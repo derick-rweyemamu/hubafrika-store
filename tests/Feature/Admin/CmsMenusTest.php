@@ -56,6 +56,80 @@ class CmsMenusTest extends CatalogTestCase
         $this->assertDatabaseCount('cms_menu_items', 0);
     }
 
+    public function test_menu_accepts_hash_symbol_as_custom_url(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(CmsMenus::class)
+            ->set('label', 'Services Dropdown')
+            ->set('url', '#')
+            ->call('addItem')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cms_menu_items', [
+            'label' => 'Services Dropdown',
+            'url' => '#',
+        ]);
+    }
+
+    public function test_menu_accepts_hash_anchor_as_custom_url(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(CmsMenus::class)
+            ->set('label', 'Contact Us Section')
+            ->set('url', '#contact-us')
+            ->call('addItem')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cms_menu_items', [
+            'label' => 'Contact Us Section',
+            'url' => '#contact-us',
+        ]);
+    }
+
+    public function test_menu_item_modal_accepts_hash_symbol_for_custom_type(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(CmsMenus::class)
+            ->call('openCreateMenuItem')
+            ->set('item_title', 'Products Dropdown')
+            ->set('item_type', 'custom')
+            ->set('item_url', '#')
+            ->call('saveMenuItem')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('cms_menu_items', [
+            'title' => 'Products Dropdown',
+            'type' => 'custom',
+            'url' => '#',
+        ]);
+    }
+
+    public function test_custom_menu_item_with_hash_is_preserved_in_storefront_menu_tree(): void
+    {
+        $menu = CmsMenu::query()->create([
+            'title' => 'Main Nav',
+            'slug' => 'test-nav',
+            'location' => 'header',
+        ]);
+
+        $item = CmsMenuItem::query()->create([
+            'menu_id' => $menu->id,
+            'title' => 'Features',
+            'label' => 'Features',
+            'type' => 'custom',
+            'url' => '#features',
+            'order' => 1,
+        ]);
+
+        $this->assertEquals('#features', $item->storefrontHref());
+        $tree = $menu->tree();
+        $this->assertCount(1, $tree);
+        $this->assertEquals('#features', $tree[0]['href']);
+    }
+
     public function test_admin_can_add_a_custom_link_to_the_footer_menu(): void
     {
         CmsPage::query()->create([
@@ -458,6 +532,65 @@ class CmsMenusTest extends CatalogTestCase
             ->assertHasErrors('item_site_path');
 
         $this->assertDatabaseMissing('cms_menu_items', ['title' => 'Nowhere']);
+    }
+
+    public function test_menu_description_and_mega_promo_sanitize_rich_html_and_widen_column(): void
+    {
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+        $longDescription = '<p>'.str_repeat('Solar kits and inverter accessories ', 8).'<strong>Certified</strong><script>alert(1)</script></p>';
+
+        $component = Livewire::test(CmsMenus::class)
+            ->call('openCreateMenu')
+            ->assertSee('role="toolbar"', false)
+            ->set('menu_title', 'Clean Energy Navigation')
+            ->set('menu_slug', 'clean-energy-nav')
+            ->set('menu_location', 'sidebar')
+            ->set('menu_description', $longDescription)
+            ->call('saveMenu')
+            ->assertHasNoErrors();
+
+        $menu = CmsMenu::query()->where('slug', 'clean-energy-nav')->firstOrFail();
+
+        $this->assertGreaterThan(255, strlen((string) $menu->description));
+        $this->assertStringContainsString('<strong>Certified</strong>', (string) $menu->description);
+        $this->assertStringNotContainsString('<script', (string) $menu->description);
+
+        $component->call('editMenu', $menu->id)
+            ->set('menu_description', '<p><br></p>')
+            ->call('saveMenu')
+            ->assertHasNoErrors();
+
+        $this->assertNull($menu->refresh()->description);
+
+        $component->call('selectMenu', $menu->id)
+            ->set('label', 'Solutions')
+            ->set('url', '/solutions')
+            ->set('isMegaMenu', true)
+            ->call('addItem')
+            ->assertHasNoErrors();
+
+        $megaItem = CmsMenuItem::query()
+            ->where('menu_id', $menu->id)
+            ->where('title', 'Solutions')
+            ->firstOrFail();
+
+        $component->call('openMegaBuilder', $megaItem->id)
+            ->set('mega_columns.0.type', 'promo')
+            ->set('mega_columns.0.title', 'Bundle Offer')
+            ->set('mega_columns.0.content', '<h3>Featured Kit</h3><p>Save <strong>15%</strong> today.<script>alert(1)</script></p><p><a href="javascript:evil()">Skip</a></p>')
+            ->call('saveMegaBuilder')
+            ->assertHasNoErrors();
+
+        $storedJson = json_encode($megaItem->refresh()->mega_menu_data, JSON_THROW_ON_ERROR);
+        $this->assertStringContainsString('Featured Kit', $storedJson);
+        $this->assertStringContainsString('15%', $storedJson);
+        $this->assertStringNotContainsString('<script', $storedJson);
+        $this->assertStringNotContainsString('javascript:', $storedJson);
+
+        $component->call('openMegaPreview', $megaItem->id)
+            ->assertSee('<h3>Featured Kit</h3>', false)
+            ->assertSee('<strong>15%</strong>', false)
+            ->assertDontSee('<script>', false);
     }
 
     /**

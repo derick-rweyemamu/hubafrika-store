@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLibraryMedia;
+use App\Models\Concerns\HasUniqueSlug;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,7 +11,7 @@ use Spatie\MediaLibrary\HasMedia;
 
 class Category extends Model implements HasMedia
 {
-    use HasLibraryMedia;
+    use HasLibraryMedia, HasUniqueSlug;
 
     protected $guarded = ['id'];
 
@@ -20,6 +21,11 @@ class Category extends Model implements HasMedia
         'digital' => 'boolean',
         'discount' => 'float',
     ];
+
+    protected static function slugFallback(): string
+    {
+        return 'category';
+    }
 
     public function registerMediaCollections(): void
     {

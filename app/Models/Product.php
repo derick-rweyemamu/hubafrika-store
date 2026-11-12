@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasLibraryMedia;
+use App\Models\Concerns\HasUniqueSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,7 @@ use Spatie\MediaLibrary\HasMedia;
 
 class Product extends Model implements HasMedia
 {
-    use HasLibraryMedia;
+    use HasLibraryMedia, HasUniqueSlug;
 
     /**
      * The price the customer actually pays, as a SQL expression, so filters
@@ -116,6 +117,11 @@ class Product extends Model implements HasMedia
             : (float) $this->discount;
 
         return round($unitPrice - min($unitPrice, max(0, $discount)), 2);
+    }
+
+    protected static function slugFallback(): string
+    {
+        return 'product';
     }
 
     public function registerMediaCollections(): void

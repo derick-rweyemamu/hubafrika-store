@@ -138,7 +138,13 @@ class Shop extends Component
                 ->withCount(['products' => $published])
                 ->orderBy('name')
                 ->get(['id', 'name']),
-        ])->layout('components.layouts.storefront', ['title' => 'Shop', 'navigationArea' => 'store']);
+        ])->layout('components.layouts.storefront', [
+            'title' => 'Shop',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'Shop',
+            ],
+        ]);
     }
 
     /**

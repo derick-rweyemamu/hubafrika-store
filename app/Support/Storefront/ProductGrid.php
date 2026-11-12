@@ -26,7 +26,7 @@ class ProductGrid
     public static function render(string $html, string $currency): string
     {
         return preg_replace_callback(
-            '/<div\b(?=[^>]*\bdata-hubafrika-products\b)[^>]*>\s*<\/div>/i',
+            '/<div\b(?=[^>]*\bdata-hubafrika-products\b)[^>]*>[\s\S]*?<\/div>/i',
             fn (array $match): string => self::renderPlaceholder($match[0], $currency),
             $html,
         ) ?? $html;
@@ -37,9 +37,29 @@ class ProductGrid
      *
      * @return Collection<int, Product>
      */
-    public static function products(string $sort = self::DEFAULT_SORT, int $limit = self::DEFAULT_LIMIT): Collection
-    {
+    public static function products(
+        string $sort = self::DEFAULT_SORT,
+        int $limit = self::DEFAULT_LIMIT,
+        string|int|null $category = null,
+        string|int|null $brand = null,
+    ): Collection {
         $query = Product::query()->published()->with(['category', 'brand']);
+
+        if (! empty($category)) {
+            if (is_numeric($category)) {
+                $query->where('category_id', (int) $category);
+            } else {
+                $query->whereHas('category', fn ($q) => $q->where('slug', $category)->orWhere('name', $category));
+            }
+        }
+
+        if (! empty($brand)) {
+            if (is_numeric($brand)) {
+                $query->where('brand_id', (int) $brand);
+            } else {
+                $query->whereHas('brand', fn ($q) => $q->where('slug', $brand)->orWhere('name', $brand));
+            }
+        }
 
         match ($sort) {
             'name_asc' => $query->orderBy('name'),
@@ -62,14 +82,38 @@ class ProductGrid
         return (string) (BusinessSetting::query()->where('type', 'currency_code')->value('value') ?: 'USD');
     }
 
+    /**
+     * Determine optimal column count for large screens based on product limit.
+     */
+    public static function columnsForLimit(int $limit): int
+    {
+        return match (true) {
+            $limit <= 1 => 1,
+            $limit === 2 => 2,
+            $limit === 3 || $limit === 6 || $limit === 9 => 3,
+            $limit === 5 || $limit === 10 => 5,
+            default => 4,
+        };
+    }
+
     private static function renderPlaceholder(string $tag, string $currency): string
     {
         $sort = self::attribute($tag, 'data-sort') ?? self::DEFAULT_SORT;
         $limit = self::attribute($tag, 'data-limit');
+        $category = self::attribute($tag, 'data-category');
+        $brand = self::attribute($tag, 'data-brand');
+        $limitCount = is_numeric($limit) ? (int) $limit : self::DEFAULT_LIMIT;
 
         return view('livewire.storefront.cms-products', [
-            'products' => self::products($sort, is_numeric($limit) ? (int) $limit : self::DEFAULT_LIMIT),
+            'products' => self::products(
+                $sort,
+                $limitCount,
+                $category,
+                $brand,
+            ),
             'currency' => $currency,
+            'limit' => $limitCount,
+            'cols' => self::columnsForLimit($limitCount),
         ])->render();
     }
 

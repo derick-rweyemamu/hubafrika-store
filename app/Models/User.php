@@ -58,7 +58,10 @@ class User extends Authenticatable implements HasMedia
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_email_code_hash',
     ];
 
     protected $casts = [
@@ -66,7 +69,55 @@ class User extends Authenticatable implements HasMedia
         'is_admin' => 'boolean',
         'banned' => 'boolean',
         'balance' => 'float',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_confirmed_at' => 'datetime',
+        'two_factor_last_totp_step' => 'integer',
+        'two_factor_email_code_expires_at' => 'datetime',
     ];
+
+    /**
+     * Whether two-factor authentication is confirmed and active on this account.
+     */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return filled($this->two_factor_secret) && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Whether a two-factor secret has been provisioned but not yet verified.
+     */
+    public function hasPendingTwoFactorSetup(): bool
+    {
+        return filled($this->two_factor_secret) && $this->two_factor_confirmed_at === null;
+    }
+
+    /**
+     * Masked registered email shown on the two-factor recovery screen.
+     */
+    public function maskedRecoveryEmail(): ?string
+    {
+        $email = trim((string) $this->email);
+
+        if ($email === '' || ! str_contains($email, '@')) {
+            return null;
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+        $visible = mb_substr($local, 0, min(2, mb_strlen($local)));
+
+        return $visible.'***@'.$domain;
+    }
+
+    /**
+     * Remove any issued single-use email recovery code from the user record.
+     */
+    public function clearTwoFactorEmailRecoveryCode(): void
+    {
+        $this->forceFill([
+            'two_factor_email_code_hash' => null,
+            'two_factor_email_code_expires_at' => null,
+        ])->save();
+    }
 
     // Relationships
     public function addresses(): HasMany

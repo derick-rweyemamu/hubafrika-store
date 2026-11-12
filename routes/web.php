@@ -96,6 +96,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/cms/posts/{post}/builder', [CmsPageBuilderController::class, 'editPost'])->middleware('permission:cms.manage')->name('cms.posts.builder');
     Route::put('/cms/posts/{post}/builder', [CmsPageBuilderController::class, 'updatePost'])->middleware('permission:cms.manage')->name('cms.posts.builder.update');
     Route::get('/cms/menus', CmsMenus::class)->middleware('permission:cms.manage')->name('cms.menus');
+    Route::get('/cms/media-library', [CmsPageBuilderController::class, 'mediaLibrary'])->middleware('permission:cms.manage')->name('cms.media-library');
     Route::get('/settings', Settings::class)->middleware('permission:settings.view')->name('settings');
     Route::post('/media/upload', MediaUploadController::class)->middleware('permission:media.manage')->name('media.upload');
     Route::get('/media', MediaBrowser::class)->middleware('permission:media.view')->name('media');

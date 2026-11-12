@@ -82,6 +82,12 @@
                 <span class="pf-meta-value">{{ $statusLabel }}</span>
             </div>
             <div class="pf-meta">
+                <span class="pf-meta-label">{{ __('Two-factor auth') }}</span>
+                <a href="{{ route('profile.edit', ['tab' => 'security']) }}" class="pf-meta-value pf-link">
+                    {{ $user->hasTwoFactorEnabled() ? __('Enabled') : __('Off') }}
+                </a>
+            </div>
+            <div class="pf-meta">
                 <span class="pf-meta-label">{{ __('Member since') }}</span>
                 <span class="pf-meta-value">{{ $user->created_at?->format('d M Y') ?? $empty }}</span>
             </div>

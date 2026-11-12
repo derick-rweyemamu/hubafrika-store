@@ -103,7 +103,9 @@
                             <td colspan="6" class="px-5 py-12 text-center">
                                 <p class="font-medium text-gray-700 dark:text-gray-200">No products found</p>
                                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a category before adding your first product.</p>
-                                <a href="{{ route('admin.categories') }}" wire:navigate class="admin-primary-text mt-3 inline-flex text-sm font-semibold">Manage categories</a>
+                                @if (auth()->user()?->can('categories.view'))
+                                    <a href="{{ route('admin.categories') }}" wire:navigate class="admin-primary-text mt-3 inline-flex text-sm font-semibold">Manage categories</a>
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -130,15 +132,24 @@
                         @if ($categories->isEmpty())
                             <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
                                 Add a category before creating products.
-                                <a href="{{ route('admin.categories') }}" wire:navigate class="font-semibold underline">Manage categories</a>
+                                @if (auth()->user()?->can('categories.view'))
+                                    <a href="{{ route('admin.categories') }}" wire:navigate class="font-semibold underline">Manage categories</a>
+                                @endif
                             </div>
                         @endif
 
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div class="sm:col-span-2">
                                 <label for="product-name" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Product name *</label>
-                                <input id="product-name" type="text" wire:model="name" class="admin-primary-focus w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                                <input id="product-name" type="text" wire:model.live.debounce.250ms="name" class="admin-primary-focus w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                                 @error('name') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label for="product-slug" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">URL slug</label>
+                                <input id="product-slug" type="text" value="{{ $slug }}" placeholder="Generated from product name" readonly
+                                       class="w-full rounded-lg border-gray-300 bg-gray-100 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Generated directly from the product name.</p>
                             </div>
 
                             <div>
@@ -231,7 +242,7 @@
 
                             <div class="sm:col-span-2">
                                 <label for="product-description" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
-                                <textarea id="product-description" rows="4" wire:model="description" class="admin-primary-focus w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950"></textarea>
+                                <x-rich-editor id="product-description" wire:model="description" placeholder="Write product details, specifications, and highlights..." />
                                 @error('description') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
 
@@ -242,9 +253,11 @@
                                 @error('uploads') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                 @error('uploads.*') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                                 <div wire:loading wire:target="uploads" class="mt-2 text-sm text-gray-500">Uploading images...</div>
-                                <button type="button" wire:click="openMediaPicker('gallery')" class="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
-                                    Choose images from media
-                                </button>
+                                @if (auth()->user()?->can('media.view'))
+                                    <button type="button" wire:click="openMediaPicker('gallery')" class="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800">
+                                        Choose images from media
+                                    </button>
+                                @endif
                                 <div class="mt-3 flex flex-wrap gap-3">
                                     @foreach ($existingPhotos as $index => $photo)
                                         <div wire:key="existing-photo-{{ $index }}" class="relative">
@@ -293,7 +306,7 @@
         </div>
     @endif
 
-    @if ($mediaPickerOpen)
+    @if ($mediaPickerOpen && auth()->user()?->can('media.view'))
         <livewire:admin.media-picker />
     @endif
 </div>

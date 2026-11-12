@@ -33,6 +33,7 @@ class RoleSeeder extends Seeder
             'cms.manage',
             'media.view',
         ],
+        'customer' => [],
     ];
 
     /**
@@ -52,11 +53,17 @@ class RoleSeeder extends Seeder
         foreach ($this->roles as $name => $permissions) {
             $role = Role::findOrCreate($name, 'web');
 
+            if ($permissions === '*') {
+                $role->syncPermissions($catalog);
+
+                continue;
+            }
+
             if ($role->permissions()->exists()) {
                 continue;
             }
 
-            $role->syncPermissions($permissions === '*' ? $catalog : $permissions);
+            $role->syncPermissions($permissions);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

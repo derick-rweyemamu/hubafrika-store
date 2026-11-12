@@ -96,4 +96,49 @@ class Media extends BaseMedia
                 ->orWhere('folder', 'like', $term);
         });
     }
+
+    /**
+     * Images stored across shared content libraries, never user avatars.
+     */
+    public function scopeContentImages(Builder $query, ?string $library = null): Builder
+    {
+        $query->where('mime_type', 'like', 'image/%');
+
+        if ($library !== null && $library !== '' && $library !== 'all') {
+            if (! MediaLibrary::isLibrary($library) || MediaLibrary::isPersonal($library)) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            return $query->forLibrary($library);
+        }
+
+        // Account pictures are never offered for reuse on content.
+        return $query
+            ->whereNotIn('model_type', MediaLibrary::modelsFor(MediaLibrary::USERS))
+            ->where(function (Builder $query): void {
+                $query->whereNull('custom_properties->library')
+                    ->orWhere('custom_properties->library', '!=', MediaLibrary::USERS);
+            });
+    }
+
+    /**
+     * Format a media record for the page builder asset manager and media modal.
+     *
+     * @return array{id: int, src: string, name: string, original_name: string, library: string, library_label: string, folder: ?string, type: string}
+     */
+    public function toBuilderAsset(): array
+    {
+        $library = $this->library();
+
+        return [
+            'id' => (int) $this->getKey(),
+            'src' => $this->getUrl(),
+            'name' => $this->libraryLabel().' / '.$this->originalFileName(),
+            'original_name' => $this->originalFileName(),
+            'library' => $library,
+            'library_label' => MediaLibrary::label($library),
+            'folder' => $this->folder,
+            'type' => 'image',
+        ];
+    }
 }

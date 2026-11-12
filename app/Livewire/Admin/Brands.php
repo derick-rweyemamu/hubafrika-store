@@ -19,6 +19,11 @@ class Brands extends Component
 {
     use PicksLibraryMedia, WithFileUploads, WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('brands.view'), 403);
+    }
+
     public string $search = '';
 
     public int $perPage = 10;

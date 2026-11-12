@@ -5,16 +5,27 @@
 @section('content')
     @php
         $data = $page->builderData();
+        $currency = \App\Support\Storefront\ProductGrid::currency();
+        $html = !empty($data['html'])
+            ? \App\Support\Storefront\PageBlocks::renderPageHeaders(
+                \App\Support\Storefront\ProductGrid::render($data['html'], $currency),
+                $page->title,
+            )
+            : '';
     @endphp
 
-    @if(!empty($data['html']))
+    @if(!empty($html))
         @if(!empty($data['css']))
             <style>
                 {!! $data['css'] !!}
             </style>
         @endif
 
-        {!! $data['html'] !!}
+        {!! $html !!}
+
+        @if(str_contains($html, 'data-hubafrika-'))
+            {!! \App\Support\Storefront\PageBlocks::script('', url()->current()) !!}
+        @endif
 
     @elseif(!empty($data['blocks']))
         <div>
@@ -26,7 +37,7 @@
                 @elseif($block['type'] === 'button')
                     <a href="{{ $block['url'] ?? '#' }}">{{ $block['label'] ?? 'Button' }}</a>
                 @elseif($block['type'] === 'product_grid')
-                    <div>{!! $block['text'] ?? '' !!}</div>
+                    @include('livewire.storefront.cms-products', ['products' => \App\Support\Storefront\ProductGrid::products(), 'currency' => $currency])
                 @endif
             @endforeach
         </div>
