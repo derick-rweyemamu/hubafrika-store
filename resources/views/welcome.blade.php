@@ -45,7 +45,7 @@
     @else
         <div>
             <h1>{{ $page->title }}</h1>
-            <p>This page has no content yet.</p>
+            <p>This page has no content yet</p>
         </div>
     @endif
 @endsection
