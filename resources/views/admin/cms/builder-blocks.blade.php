@@ -1067,10 +1067,10 @@ media: `<svg class="w-8 h-8 mx-auto text-sky-400" viewBox="0 0 24 24" fill="none
 </svg>`,
 content: `
 <div
-    class="my-4 rounded-2xl overflow-hidden shadow-md border border-slate-200 aspect-[16/9] sm:aspect-[21/9] bg-slate-100">
-    <iframe class="w-full h-full border-0"
-        src="https://maps.google.com/maps?q=Oxford+University,+Oxford,+UK&t=&z=14&ie=UTF8&iwloc=&output=embed"
-        loading="lazy" allowfullscreen></iframe>
+    class="my-4 w-full overflow-hidden border border-slate-200 hubafrika-map-container bg-slate-100" style="height: 450px;">
+    <iframe class="w-full h-full border-0" height="450" style="height: 450px;"
+        src="https://maps.google.com/maps?q=Pangani+Street,+Mjini+Kati,+Arusha,+Tanzania&t=&z=15&ie=UTF8&iwloc=&output=embed"
+        loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
 </div>`
 });
 
@@ -1122,6 +1122,34 @@ content: `
 </div>`
 });
 
+// Newsletter Subscription Block
+bm.add('widget-newsletter', {
+label: 'Newsletter Signup',
+category: widgetCategory,
+media: `<svg class="w-8 h-8 mx-auto text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8">
+    <path d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+</svg>`,
+content: `
+<section class="my-8 p-8 sm:p-10 rounded-3xl bg-slate-900 text-white text-center shadow-xl max-w-3xl mx-auto">
+    <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-800 text-lime-400 flex items-center justify-center text-2xl mb-4 shadow-sm">
+        <i class="fas fa-paper-plane"></i>
+    </div>
+    <h3 class="text-2xl sm:text-3xl font-black mb-2 tracking-tight">Stay Powered Up & Informed</h3>
+    <p class="text-xs sm:text-sm text-slate-300 mb-6 max-w-lg mx-auto leading-relaxed">
+        Subscribe to HubAfrika updates for clean energy insights, commercial equipment launches, and exclusive member discounts.
+    </p>
+    <form action="/newsletter" method="POST" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+        <input type="email" name="email" placeholder="Enter your email address..." required
+            class="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400" />
+        <button type="submit"
+            class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all cursor-pointer">
+            Subscribe
+        </button>
+    </form>
+</section>`
+});
+
 // Contact Form Block
 bm.add('widget-contact-form', {
 label: 'Contact Form',
@@ -1133,44 +1161,102 @@ media: `<svg class="w-8 h-8 mx-auto text-sky-400" viewBox="0 0 24 24" fill="none
     <line x1="6" y1="14" x2="14" y2="14" />
 </svg>`,
 content: `
-<div class="my-6 p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-md">
-    <div class="mb-6">
-        <span
-            class="text-xs font-bold uppercase tracking-wider text-sky-600 bg-sky-50 px-3 py-1 rounded-full border border-sky-100">Get
-            in Touch</span>
-        <h3 class="text-2xl font-extrabold text-slate-900 mt-2">Send Us an Inquiry</h3>
-        <p class="text-xs sm:text-sm text-slate-500 mt-1">Our academic counseling team will respond within 24 hours.</p>
+<section class="py-12 hubafrika-surface-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="hubafrika-contact-grid">
+            <!-- Left Info Column -->
+            <div class="hubafrika-contact-info space-y-6">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-emerald-800 tracking-tight">Get in touch</h2>
+                    <p class="mt-3 text-sm text-slate-500 leading-relaxed">
+                        We'd love to hear from you! Whether you have a question, suggestion, or need more information about our products and services, feel free to reach out to us.
+                    </p>
+                </div>
+
+                <div class="space-y-5 pt-2">
+                    <!-- Location -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-map-marker-alt text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Location</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+                                Pangani Street/Mjini Kati Arusha<br>Arusha - Tanzania.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Email us -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-envelope text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Email us</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5 space-y-0.5">
+                                <a href="mailto:info@hubafrika.net" class="block hover:text-emerald-700 transition">info@hubafrika.net</a>
+                                <a href="mailto:sales@hubafrika.net" class="block hover:text-emerald-700 transition">sales@hubafrika.net</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Call us -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-phone-alt text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Call us</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                                <a href="tel:+255625003073" class="hover:text-emerald-700 transition font-medium">+255 625 003 073</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Form Column -->
+            <div class="hubafrika-contact-card">
+                <div class="mb-6">
+                    <span
+                        class="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Contact Us</span>
+                    <h3 class="text-2xl font-extrabold text-slate-900 mt-2">Send Us an Inquiry</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">Our clean energy specialists will respond within 24 hours.</p>
+                </div>
+                <form onsubmit="event.preventDefault(); alert('Inquiry received. Thank you!');" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
+                            <input type="text" placeholder="John Doe" required
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                            <input type="email" placeholder="john@example.com" required
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Subject / System of Interest</label>
+                        <input type="text" placeholder="e.g. Solar Home System / Hybrid Inverters"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Your Message</label>
+                        <textarea rows="4" placeholder="How can we help you?" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-900/20 transition-all cursor-pointer">
+                        <span>Send Message</span>
+                        <i class="fas fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-    <form onsubmit="event.preventDefault(); alert('Inquiry received. Thank you!');" class="space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
-                <input type="text" placeholder="John Doe" required
-                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-slate-50/50" />
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
-                <input type="email" placeholder="john@example.com" required
-                    class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-slate-50/50" />
-            </div>
-        </div>
-        <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Subject / Program of Interest</label>
-            <input type="text" placeholder="e.g. Undergraduate Science Admissions"
-                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-slate-50/50" />
-        </div>
-        <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Your Message</label>
-            <textarea rows="4" placeholder="How can we help you?" required
-                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 bg-slate-50/50"></textarea>
-        </div>
-        <button type="submit"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 transition-all cursor-pointer">
-            <span>Send Message</span>
-            <i class="fas fa-paper-plane text-xs"></i>
-        </button>
-    </form>
-</div>`
+</section>`
 });
 
 // Flip Box Block
@@ -1545,6 +1631,110 @@ content: `
                 <img src="/images/storefront/carousel-backup.jpg"
                     alt="Hub Afrika hybrid inverter and battery storage wall mount"
                     class="w-full h-full object-cover" />
+            </div>
+        </div>
+    </div>
+</section>`
+});
+
+// 8. Contact & Inquiry Section (Polished Two-Column Layout)
+bm.add('hubafrika-contact-section', {
+label: 'Contact & Inquiry Section',
+category: 'Storefront Sections',
+media: '<i class="fas fa-address-book fa-2x"></i>',
+content: `
+<section class="py-16 hubafrika-surface-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="hubafrika-contact-grid">
+            <!-- Left Info Column -->
+            <div class="hubafrika-contact-info space-y-6">
+                <div>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-emerald-800 tracking-tight">Get in touch</h2>
+                    <p class="mt-3 text-sm text-slate-500 leading-relaxed">
+                        We'd love to hear from you! Whether you have a question, suggestion, or need more information about our products and services, feel free to reach out to us.
+                    </p>
+                </div>
+
+                <div class="space-y-6 pt-2">
+                    <!-- Location -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-map-marker-alt text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Location</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+                                Pangani Street/Mjini Kati Arusha<br>Arusha - Tanzania.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Email us -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-envelope text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Email us</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5 space-y-0.5">
+                                <a href="mailto:info@hubafrika.net" class="block hover:text-emerald-700 transition">info@hubafrika.net</a>
+                                <a href="mailto:sales@hubafrika.net" class="block hover:text-emerald-700 transition">sales@hubafrika.net</a>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Call us -->
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-800 text-lime-400 flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fas fa-phone-alt text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-bold text-emerald-800">Call us</h4>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                                <a href="tel:+255625003073" class="hover:text-emerald-700 transition font-medium">+255 625 003 073</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Form Column -->
+            <div class="hubafrika-contact-card">
+                <div class="mb-6">
+                    <span
+                        class="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">Contact Us</span>
+                    <h3 class="text-2xl font-extrabold text-slate-900 mt-2">Send Us an Inquiry</h3>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-1">Our clean energy specialists will respond within 24 hours.</p>
+                </div>
+                <form onsubmit="event.preventDefault(); alert('Inquiry received. Thank you!');" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
+                            <input type="text" placeholder="John Doe" required
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
+                            <input type="email" placeholder="john@example.com" required
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Subject / System of Interest</label>
+                        <input type="text" placeholder="e.g. Solar Home System / Hybrid Inverters"
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Your Message</label>
+                        <textarea rows="4" placeholder="How can we help you?" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-900/20 transition-all cursor-pointer">
+                        <span>Send Message</span>
+                        <i class="fas fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>

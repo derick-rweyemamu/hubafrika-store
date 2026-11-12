@@ -29,7 +29,7 @@ class CmsPageTest extends CatalogTestCase
 
         $this->get(route('pages.show', 'about'))
             ->assertOk()
-            ->assertSee('sandbox="allow-scripts"', false)
+            ->assertSee('sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"', false)
             ->assertSee('Content-Security-Policy', false)
             ->assertSee('No published products are available yet.')
             ->assertDontSee('data-hubafrika-products', false)

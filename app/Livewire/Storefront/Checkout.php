@@ -5,13 +5,17 @@ namespace App\Livewire\Storefront;
 use App\Mail\OrderPlacedMail;
 use App\Models\BusinessSetting;
 use App\Models\Cart as CartItem;
+use App\Models\City;
+use App\Models\Country;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\State;
 use App\Models\User;
 use App\Support\Storefront\CartSession;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -34,11 +38,17 @@ class Checkout extends Component
 
     public string $shippingAddress = '';
 
-    public string $shippingCountry = '';
+    public string $shippingCountryId = '';
 
-    public string $shippingState = '';
+    public string $shippingStateId = '';
 
-    public string $shippingCity = '';
+    public string $shippingCityId = '';
+
+    /** Free-text fallback when the selected state has no cities in the DB. */
+    public string $shippingCityText = '';
+
+    /** Free-text fallback when the selected country has no states in the DB. */
+    public string $shippingStateText = '';
 
     public string $shippingPostalCode = '';
 
@@ -57,18 +67,121 @@ class Checkout extends Component
             ?? $customer?->addresses()->first();
 
         $this->shippingAddress = $defaultAddress?->address ?? $customer?->address ?? '';
-        $this->shippingCountry = $customer?->country ?? '';
-        $this->shippingState = $customer?->state ?? '';
-        $this->shippingCity = $customer?->city ?? '';
         $this->shippingPostalCode = $defaultAddress?->postal_code ?? $customer?->postal_code ?? '';
         $this->shippingPhone = $defaultAddress?->phone ?? $customer?->phone ?? '';
         $this->paymentMethod = (string) (array_key_first(Payment::availableMethods()) ?? '');
         $this->paymentPayerPhone = $customer?->phone ?? '';
 
+        // Prefill country/state/city from the default address FKs first,
+        // then fall back to matching the user's plain-text fields.
+        $countryId = $defaultAddress?->country_id;
+        $stateId = $defaultAddress?->state_id;
+        $cityId = $defaultAddress?->city_id;
+
+        if ($countryId === null && filled($customer?->country)) {
+            $countryId = Country::query()
+                ->where('status', 1)
+                ->where('name', $customer->country)
+                ->value('id');
+        }
+
+        if ($countryId !== null && $stateId === null && filled($customer?->state)) {
+            $stateId = State::query()
+                ->where('country_id', $countryId)
+                ->where('name', $customer->state)
+                ->value('id');
+        }
+
+        if ($stateId !== null && $cityId === null && filled($customer?->city)) {
+            $cityId = City::query()
+                ->where('state_id', $stateId)
+                ->where('name', $customer->city)
+                ->value('id');
+        }
+
+        $this->shippingCountryId = (string) ($countryId ?? '');
+        $this->shippingStateId = (string) ($stateId ?? '');
+        $this->shippingCityId = (string) ($cityId ?? '');
+
+        // Pre-fill text fallbacks from the user's plain-text fields when no
+        // matching geo record was found (state has no cities, or country has
+        // no states in the DB).
+        $this->shippingStateText = $stateId === null ? ($customer?->state ?? '') : '';
+        $this->shippingCityText = $cityId === null ? ($customer?->city ?? '') : '';
+
         // Signing in from the guest form should come back here with the cart.
         if (! $customer instanceof User) {
             session()->put('url.intended', route('checkout'));
         }
+    }
+
+    /**
+     * Reset dependent selects when country changes.
+     */
+    public function updatedShippingCountryId(): void
+    {
+        $this->shippingStateId = '';
+        $this->shippingStateText = '';
+        $this->shippingCityId = '';
+        $this->shippingCityText = '';
+    }
+
+    /**
+     * Reset city when state changes.
+     */
+    public function updatedShippingStateId(): void
+    {
+        $this->shippingCityId = '';
+        $this->shippingCityText = '';
+    }
+
+    /**
+     * Load the list of active countries for the select.
+     *
+     * @return Collection<int, Country>
+     */
+    public function getCountriesProperty(): Collection
+    {
+        return Country::query()
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    /**
+     * Load states for the currently selected country.
+     *
+     * @return Collection<int, State>
+     */
+    public function getStatesProperty(): Collection
+    {
+        if ($this->shippingCountryId === '') {
+            return collect();
+        }
+
+        return State::query()
+            ->where('country_id', (int) $this->shippingCountryId)
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    /**
+     * Load cities for the currently selected state.
+     *
+     * @return Collection<int, City>
+     */
+    public function getCitiesProperty(): Collection
+    {
+        if ($this->shippingStateId === '') {
+            return collect();
+        }
+
+        return City::query()
+            ->where('state_id', (int) $this->shippingStateId)
+            ->where('status', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
     }
 
     public function placeOrder(): void
@@ -103,15 +216,31 @@ class Checkout extends Component
 
         $validated = $this->validate([
             'shippingAddress' => ['required', 'string', 'max:1000'],
-            'shippingCountry' => ['nullable', 'string', 'max:100'],
-            'shippingState' => ['nullable', 'string', 'max:100'],
-            'shippingCity' => ['nullable', 'string', 'max:100'],
+            'shippingCountryId' => ['nullable', 'string', 'max:20'],
+            'shippingStateId' => ['nullable', 'string', 'max:20'],
+            'shippingStateText' => ['nullable', 'string', 'max:100'],
+            'shippingCityId' => ['nullable', 'string', 'max:20'],
+            'shippingCityText' => ['nullable', 'string', 'max:100'],
             'shippingPostalCode' => ['nullable', 'string', 'max:30'],
             'shippingPhone' => ['nullable', 'string', 'max:50'],
             'paymentMethod' => ['required', Rule::in(array_keys($paymentMethods))],
             'paymentPayerPhone' => ['nullable', 'string', 'max:50'],
             'paymentReference' => ['nullable', 'string', 'max:100'],
         ]);
+
+        // Resolve IDs to names for storage on the order.
+        // Use the text fallback when the select has no options (no states/cities in DB).
+        $countryName = $validated['shippingCountryId'] !== '' && $validated['shippingCountryId'] !== null
+            ? Country::query()->where('id', (int) $validated['shippingCountryId'])->value('name')
+            : null;
+
+        $stateName = $validated['shippingStateId'] !== '' && $validated['shippingStateId'] !== null
+            ? State::query()->where('id', (int) $validated['shippingStateId'])->value('name')
+            : (filled($validated['shippingStateText']) ? $validated['shippingStateText'] : null);
+
+        $cityName = $validated['shippingCityId'] !== '' && $validated['shippingCityId'] !== null
+            ? City::query()->where('id', (int) $validated['shippingCityId'])->value('name')
+            : (filled($validated['shippingCityText']) ? $validated['shippingCityText'] : null);
 
         $paymentMethod = $validated['paymentMethod'];
         $isLipa = $paymentMethod === Payment::METHOD_VODACOM_LIPA;
@@ -140,7 +269,17 @@ class Checkout extends Component
             $customer = $this->createCustomer($account);
         }
 
-        $order = DB::transaction(function () use ($customer, $validated, $paymentMethod, $isLipa, $payerPhone, $lipaAccount): Order {
+        // Persist the delivery fields back to the customer record for next time.
+        $customer->forceFill([
+            'country' => $countryName,
+            'state' => $stateName,
+            'city' => $cityName,
+            'address' => $validated['shippingAddress'],
+            'postal_code' => $validated['shippingPostalCode'] ?: null,
+            'phone' => $validated['shippingPhone'] ?: $customer->phone,
+        ])->save();
+
+        $order = DB::transaction(function () use ($customer, $validated, $countryName, $stateName, $cityName, $paymentMethod, $isLipa, $payerPhone, $lipaAccount): Order {
             $cartItems = CartSession::query($customer)
                 ->with('product')
                 ->lockForUpdate()
@@ -236,9 +375,9 @@ class Checkout extends Component
                 'shipping_total' => $shippingTotal,
                 'total' => round($subtotal - $discountTotal + $taxTotal + $shippingTotal, 2),
                 'shipping_address' => $validated['shippingAddress'],
-                'shipping_country' => $validated['shippingCountry'] ?: null,
-                'shipping_state' => $validated['shippingState'] ?: null,
-                'shipping_city' => $validated['shippingCity'] ?: null,
+                'shipping_country' => $countryName,
+                'shipping_state' => $stateName,
+                'shipping_city' => $cityName,
                 'shipping_postal_code' => $validated['shippingPostalCode'] ?: null,
             ]);
 

@@ -48,21 +48,56 @@
                 @error('shippingAddress') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {{-- Country select --}}
                 <div>
                     <label for="checkout-country" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Country</label>
-                    <input id="checkout-country" type="text" wire:model="shippingCountry" autocomplete="country-name" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                    @error('shippingCountry') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    <select id="checkout-country" wire:model.live="shippingCountryId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                        <option value="">— Select country —</option>
+                        @foreach ($this->countries as $country)
+                            <option value="{{ $country->id }}">{{ $country->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('shippingCountryId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- State / province: select if country has states, otherwise text input --}}
                 <div>
                     <label for="checkout-state" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">State / province</label>
-                    <input id="checkout-state" type="text" wire:model="shippingState" autocomplete="address-level1" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                    @error('shippingState') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @if ($shippingCountryId !== '' && $this->states->isNotEmpty())
+                        <select id="checkout-state" wire:model.live="shippingStateId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            <option value="">— Select state —</option>
+                            @foreach ($this->states as $state)
+                                <option value="{{ $state->id }}">{{ $state->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('shippingStateId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @else
+                        <input id="checkout-state" type="text" wire:model="shippingStateText" autocomplete="address-level1" placeholder="{{ $shippingCountryId === '' ? 'Select a country first' : 'Type state / province' }}" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950" @disabled($shippingCountryId === '')>
+                        @error('shippingStateText') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @endif
                 </div>
+
+                {{-- City: select if state has cities, otherwise text input --}}
                 <div>
                     <label for="checkout-city" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">City</label>
-                    <input id="checkout-city" type="text" wire:model="shippingCity" autocomplete="address-level2" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                    @error('shippingCity') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @if ($shippingStateId !== '' && $this->cities->isNotEmpty())
+                        <select id="checkout-city" wire:model.live="shippingCityId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            <option value="">— Select city —</option>
+                            @foreach ($this->cities as $city)
+                                <option value="{{ $city->id }}">{{ $city->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('shippingCityId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @else
+                        @php
+                            $cityDisabled = $shippingCountryId === '' || ($this->states->isNotEmpty() && $shippingStateId === '');
+                            $cityPlaceholder = $shippingCountryId === '' ? 'Select a country first' : ($this->states->isNotEmpty() && $shippingStateId === '' ? 'Select a state first' : 'Type city');
+                        @endphp
+                        <input id="checkout-city" type="text" wire:model="shippingCityText" autocomplete="address-level2" placeholder="{{ $cityPlaceholder }}" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950" @disabled($cityDisabled)>
+                        @error('shippingCityText') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @endif
                 </div>
+
                 <div>
                     <label for="checkout-postal" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Postal code</label>
                     <input id="checkout-postal" type="text" wire:model="shippingPostalCode" autocomplete="postal-code" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">

@@ -18,6 +18,11 @@ class Orders extends Component
 {
     use WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('orders.view'), 403);
+    }
+
     public string $search = '';
 
     public string $status = 'all';

@@ -20,6 +20,7 @@ use App\Livewire\Admin\Products;
 use App\Livewire\Admin\Reports;
 use App\Livewire\Admin\Roles;
 use App\Livewire\Admin\Settings;
+use App\Livewire\Admin\Subscribers;
 use App\Livewire\Admin\Units;
 use App\Livewire\Admin\Users;
 use App\Livewire\Storefront\Cart;
@@ -62,6 +63,9 @@ Route::post('/newsletter', NewsletterSubscribeController::class)
     ->middleware('throttle:10,1')
     ->name('newsletter.subscribe');
 
+Route::get('/newsletter/unsubscribe/{subscriber}', [NewsletterSubscribeController::class, 'unsubscribe'])
+    ->name('newsletter.unsubscribe');
+
 // Vodacom Lipa payment callback. Signature-verified, CSRF-exempt (see bootstrap/app.php).
 Route::post('/payments/vodacom/callback', VodacomCallbackController::class)
     ->middleware('throttle:60,1')
@@ -87,6 +91,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/users', Users::class)->middleware('permission:users.view')->name('users');
     Route::get('/roles', Roles::class)->middleware('permission:roles.view')->name('roles');
     Route::get('/customers', Customers::class)->middleware('permission:customers.view')->name('customers');
+    Route::get('/subscribers', Subscribers::class)->middleware('permission:subscribers.view')->name('subscribers');
     Route::get('/orders', AdminOrders::class)->middleware('permission:orders.view')->name('orders');
     Route::get('/reports', Reports::class)->middleware('permission:reports.view')->name('reports');
     Route::get('/cms/pages', CmsPages::class)->middleware('permission:cms.manage')->name('cms.pages');

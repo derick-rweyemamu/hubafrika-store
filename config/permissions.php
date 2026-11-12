@@ -29,6 +29,10 @@ return [
             'customers.manage' => 'Edit and suspend customers',
             'reports.view' => 'View sales, product, customer and stock reports',
         ],
+        'Marketing' => [
+            'subscribers.view' => 'View newsletter subscribers and campaigns',
+            'subscribers.manage' => 'Manage subscribers and send email campaigns',
+        ],
         'Content' => [
             'cms.manage' => 'Create, edit and delete pages, posts and menus',
         ],

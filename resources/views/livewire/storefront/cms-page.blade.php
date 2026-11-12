@@ -3,7 +3,7 @@
         <iframe
             id="cms-page-preview"
             title="{{ $page->title }}"
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
             srcdoc="{{ $builderDocument }}"
             scrolling="no" class="block w-full border-0"
             style="height: 85vh; min-height: 640px;"

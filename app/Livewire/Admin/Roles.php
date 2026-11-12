@@ -12,6 +12,11 @@ class Roles extends Component
 {
     use WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('roles.view'), 403);
+    }
+
     public string $search = '';
 
     public int $perPage = 10;

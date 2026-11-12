@@ -23,6 +23,8 @@ class OrderDetail extends Component
 
     public function submitReference(): void
     {
+        abort_unless(auth()->id() === $this->order->user_id, 403);
+
         $order = $this->order;
 
         if (

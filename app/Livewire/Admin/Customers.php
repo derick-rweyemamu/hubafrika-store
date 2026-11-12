@@ -15,6 +15,11 @@ class Customers extends Component
 {
     use WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('customers.view'), 403);
+    }
+
     public string $search = '';
 
     public int $perPage = 10;

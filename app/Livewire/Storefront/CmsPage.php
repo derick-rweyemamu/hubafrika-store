@@ -82,7 +82,7 @@ class CmsPage extends Component
             '--storefront-surface' => $palette['surface'],
             '--storefront-text' => $palette['text'],
         ])->map(fn (string $value, string $name): string => $name.':'.$value)->implode(';');
-        $contentSecurityPolicy = "default-src 'none'; script-src 'nonce-{$nonce}'; style-src 'unsafe-inline' https: {$assetOrigin}; img-src https: http: data:; font-src https: data:; connect-src 'none'; form-action 'none'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com; object-src 'none'; base-uri 'none'";
+        $contentSecurityPolicy = "default-src 'none'; script-src 'nonce-{$nonce}' 'unsafe-eval' 'unsafe-inline' https:; style-src 'unsafe-inline' https: {$assetOrigin}; img-src https: http: data:; font-src https: data:; connect-src 'self'; form-action 'self' https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com https://maps.google.com https://*.google.com https://*.google.co.tz https://*.openstreetmap.org; object-src 'none'; base-uri 'none'";
         $resizeScript = '<script nonce="'.$nonce.'">'
             .'const reportPageHeight=()=>window.parent.postMessage({type:"hubafrika-cms-resize",height:Math.ceil(document.documentElement.scrollHeight)},"*");'
             .'document.addEventListener("click",event=>{const link=event.target instanceof Element?event.target.closest("a[href]"):null;if(!link)return;const url=new URL(link.href,window.location.href);if(!["http:","https:"].includes(url.protocol))return;event.preventDefault();window.parent.postMessage({type:"hubafrika-cms-navigate",href:url.href,target:link.target||""},"*")});'

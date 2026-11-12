@@ -47,7 +47,6 @@ class User extends Authenticatable implements HasMedia
         'name',
         'email',
         'password',
-        'is_admin',
         'phone',
         'address',
         'country',

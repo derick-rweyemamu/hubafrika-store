@@ -267,6 +267,13 @@ function run(){
     [].slice.call(document.querySelectorAll('[data-hubafrika-progress]')).forEach(initProgress);
     [].slice.call(document.querySelectorAll('[data-hubafrika-logo-slider]')).forEach(initLogoSlider);
     initShare();
+    document.addEventListener('submit',function(e){
+        var form=e.target&&e.target.closest?e.target.closest('form'):null;
+        if(form&&!form.getAttribute('action')){
+            e.preventDefault();
+            alert('Inquiry received. Thank you!');
+        }
+    });
 }
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',run);}else{run();}
 JS;

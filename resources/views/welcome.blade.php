@@ -31,7 +31,7 @@
         <div>
             @foreach($data['blocks'] as $block)
                 @if($block['type'] === 'text' || $block['type'] === 'heading')
-                    <div>{!! $block['text'] ?? '' !!}</div>
+                    <div>{!! \App\Support\RichText::toHtml($block['text'] ?? '') !!}</div>
                 @elseif($block['type'] === 'image')
                     <img src="{{ $block['image_url'] ?? '' }}" alt="{{ $block['alt'] ?? '' }}">
                 @elseif($block['type'] === 'button')

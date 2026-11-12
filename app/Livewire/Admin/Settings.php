@@ -15,6 +15,11 @@ class Settings extends Component
 {
     use PicksLibraryMedia, WithFileUploads;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('settings.view'), 403);
+    }
+
     /** The image field key used by the media picker on this screen. */
     private const BRANDING_PICK = 'branding';
 

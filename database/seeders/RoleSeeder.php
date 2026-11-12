@@ -25,6 +25,7 @@ class RoleSeeder extends Seeder
             'units.view', 'units.manage',
             'orders.view', 'orders.manage',
             'customers.view', 'customers.manage',
+            'subscribers.view', 'subscribers.manage',
             'reports.view',
             'cms.manage',
             'media.view',

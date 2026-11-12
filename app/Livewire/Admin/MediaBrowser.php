@@ -15,6 +15,11 @@ class MediaBrowser extends Component
 {
     use WithFileUploads, WithPagination;
 
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->can('media.view'), 403);
+    }
+
     public string $library = 'all';
 
     public string $search = '';
