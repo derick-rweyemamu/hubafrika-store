@@ -22,27 +22,67 @@
 @endphp
 
 {{-- Subscribe to our newsletter section (from prototype) --}}
-<section class="nl">
+<section class="nl" x-data="{
+    email: '{{ old('email') }}',
+    loading: false,
+    statusMessage: '{{ session('newsletter_status') ?? '' }}',
+    errorMessage: '',
+    async submitForm() {
+        const trimmed = (this.email || '').trim();
+        if (!trimmed) return;
+        this.loading = true;
+        this.errorMessage = '';
+        this.statusMessage = '';
+        try {
+            const token = document.querySelector('meta[name=\'csrf-token\']')?.content || '{{ csrf_token() }}';
+            const res = await fetch('{{ route('newsletter.subscribe') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ email: trimmed, source: 'footer' })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                this.statusMessage = data.message || '{{ __('Thanks for subscribing. We will keep you posted.') }}';
+                this.email = '';
+            } else {
+                this.errorMessage = data.errors?.email?.[0] || data.message || '{{ __('Failed to subscribe. Please try again.') }}';
+            }
+        } catch (e) {
+            this.errorMessage = '{{ __('Something went wrong. Please check your connection.') }}';
+        } finally {
+            this.loading = false;
+        }
+    }
+}">
     <div class="w">
         <h3 class="st">{{ __('Subscribe to our newsletter') }}</h3>
         <p class="mut" style="margin:0">{{ __('Get the latest updates on new products and promotions.') }}</p>
-        <form id="nf" method="POST" action="{{ route('newsletter.subscribe') }}" class="sf-news-form">
+        <form id="nf" method="POST" action="{{ route('newsletter.subscribe') }}" class="sf-news-form" @submit.prevent="submitForm">
             @csrf
             <label class="sr-only" for="footer-newsletter-email">{{ __('Email address') }}</label>
-            <input id="footer-newsletter-email" type="email" name="email" value="{{ old('email') }}"
-                placeholder="{{ __('Email address') }}" autocomplete="email" required class="sf-news-input">
-            <button type="submit" class="btn sf-news-submit">
-                <span>{{ __('Subscribe') }}</span>
+            <input id="footer-newsletter-email" type="email" name="email" x-model="email" value="{{ old('email') }}"
+                placeholder="{{ __('Email address') }}" autocomplete="email" required class="sf-news-input" :disabled="loading">
+            <button type="submit" class="btn sf-news-submit" :disabled="loading">
+                <span x-show="!loading">{{ __('Subscribe') }}</span>
+                <span x-show="loading" x-cloak>{{ __('Subscribing...') }}</span>
                 <span class="sr-only">{{ __('Sign Up') }}</span>
             </button>
         </form>
 
+        <p x-show="statusMessage" x-cloak class="sf-news-note" role="status" x-text="statusMessage"></p>
+        <p x-show="errorMessage" x-cloak class="sf-news-error" role="alert" x-text="errorMessage"></p>
+
         @error('email')
-            <p class="sf-news-error" role="alert">{{ $message }}</p>
+            <p x-show="!errorMessage" class="sf-news-error" role="alert">{{ $message }}</p>
         @enderror
 
         @if (session('newsletter_status'))
-            <p class="sf-news-note" role="status">{{ session('newsletter_status') }}</p>
+            <p x-show="!statusMessage" class="sf-news-note" role="status">{{ session('newsletter_status') }}</p>
         @endif
     </div>
 </section>

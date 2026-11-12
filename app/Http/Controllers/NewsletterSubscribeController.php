@@ -46,7 +46,7 @@ class NewsletterSubscribeController extends Controller
         $subscriber->unsubscribed_at = null;
         $subscriber->save();
 
-        if ($request->wantsJson()) {
+        if ($request->expectsJson() || $request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => __('Thanks for subscribing. We will keep you posted.'),

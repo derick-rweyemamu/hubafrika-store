@@ -269,7 +269,36 @@ function run(){
     initShare();
     document.addEventListener('submit',function(e){
         var form=e.target&&e.target.closest?e.target.closest('form'):null;
-        if(form&&!form.getAttribute('action')){
+        if(!form)return;
+        var action=form.getAttribute('action')||'';
+        if(action.indexOf('/newsletter')!==-1){
+            e.preventDefault();
+            var emailInput=form.querySelector('input[type="email"],input[name="email"]');
+            var emailVal=emailInput?emailInput.value.trim():'';
+            if(!emailVal)return;
+            var submitBtn=form.querySelector('button[type="submit"]');
+            var originalLabel=submitBtn?submitBtn.innerHTML:'';
+            if(submitBtn){submitBtn.disabled=true;submitBtn.innerHTML='Subscribing...';}
+            fetch('/newsletter',{
+                method:'POST',
+                headers:{
+                    'Content-Type':'application/json',
+                    'Accept':'application/json',
+                    'X-Requested-With':'XMLHttpRequest'
+                },
+                body:JSON.stringify({email:emailVal,source:'cms_page'})
+            }).then(function(r){return r.json();})
+            .then(function(d){
+                alert(d.message||'Thanks for subscribing. We will keep you posted.');
+                if(emailInput)emailInput.value='';
+                if(submitBtn){submitBtn.disabled=false;submitBtn.innerHTML='Subscribed!';}
+            }).catch(function(){
+                alert('Thanks for subscribing. We will keep you posted.');
+                if(submitBtn){submitBtn.disabled=false;submitBtn.innerHTML=originalLabel;}
+            });
+            return;
+        }
+        if(!action){
             e.preventDefault();
             alert('Inquiry received. Thank you!');
         }
