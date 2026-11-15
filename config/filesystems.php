@@ -41,7 +41,12 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'url' => rtrim(
+                preg_replace('#^https?://https?//#i', 'https://',
+                    preg_replace('#^https?//#i', 'https://', env('APP_URL', 'http://localhost'))
+                ),
+                '/'
+            ).'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

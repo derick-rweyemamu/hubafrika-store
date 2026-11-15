@@ -246,7 +246,14 @@ trait HasLibraryMedia
             return null;
         }
 
+        $path = preg_replace('#^https?://https?//#i', 'https://', $path);
+        $path = preg_replace('#^https?//#i', 'https://', $path);
+
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
+            if (request()->isSecure() || str_starts_with((string) config('app.url'), 'https://')) {
+                return preg_replace('#^http://#i', 'https://', $path);
+            }
+
             return $path;
         }
 

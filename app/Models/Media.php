@@ -60,6 +60,24 @@ class Media extends BaseMedia
         return (string) ($this->getCustomProperty('original_name') ?: $this->file_name);
     }
 
+    /**
+     * Get the url of the image for the given conversion.
+     * Sanitizes malformed schemes (e.g. http://https//) and ensures HTTPS in secure environments.
+     */
+    public function getUrl(string $conversionName = ''): string
+    {
+        $url = parent::getUrl($conversionName);
+
+        $url = preg_replace('#^https?://https?//#i', 'https://', $url);
+        $url = preg_replace('#^https?//#i', 'https://', $url);
+
+        if (request()->isSecure() || str_starts_with((string) config('app.url'), 'https://')) {
+            $url = preg_replace('#^http://#i', 'https://', $url);
+        }
+
+        return $url;
+    }
+
     public function isPersonal(): bool
     {
         return MediaLibrary::isPersonal($this->library());

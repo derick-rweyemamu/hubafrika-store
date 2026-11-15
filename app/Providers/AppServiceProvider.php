@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\Storefront\Palette;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View as ViewFacade;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View;
@@ -27,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (str_starts_with((string) config('app.url'), 'https://') || app()->isProduction()) {
+            URL::forceScheme('https');
+        }
+
         // Flag-based administrators and members of the super role hold every
         // permission, so they never need to be granted abilities one by one.
         Gate::before(fn (User $user): ?bool => $user->isAdmin() ? true : null);
