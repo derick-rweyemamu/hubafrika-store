@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -188,6 +189,29 @@ class Users extends Component
                 ? 'User suspended. Their data and purchase history are retained.'
                 : 'User restored successfully.',
         );
+    }
+
+    public function sendPasswordReset(int $id): void
+    {
+        $this->authorizeAdmin();
+
+        $user = $this->userQuery()->findOrFail($id);
+
+        if (blank($user->email)) {
+            session()->flash('error', 'This user account does not have an email address.');
+
+            return;
+        }
+
+        $status = Password::sendResetLink(['email' => $user->email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            session()->flash('message', "Password reset email sent to {$user->email}.");
+
+            return;
+        }
+
+        session()->flash('error', __($status));
     }
 
     public function delete(int $id): void

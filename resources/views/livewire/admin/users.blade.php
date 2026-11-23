@@ -87,6 +87,15 @@
                                     <button type="button" wire:click="edit({{ $user->id }})" title="Edit" aria-label="Edit user" class="admin-primary-soft-bg admin-primary-text inline-flex h-8 w-8 items-center justify-center rounded-md transition hover:brightness-95">
                                         <i class="fas fa-pen text-xs" aria-hidden="true"></i>
                                     </button>
+                                    <button type="button"
+                                            wire:click="sendPasswordReset({{ $user->id }})"
+                                            wire:confirm="Send a password reset link by email to {{ $user->email }}?"
+                                            wire:loading.attr="disabled"
+                                            title="Reset password"
+                                            aria-label="Send password reset email"
+                                            class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900">
+                                        <i class="fas fa-key text-xs" aria-hidden="true"></i>
+                                    </button>
                                     <button type="button" wire:click="toggleSuspension({{ $user->id }})"
                                             wire:confirm="{{ $user->banned ? 'Restore this user account?' : 'Suspend this user account? Their data will be retained.' }}"
                                             title="{{ $user->banned ? 'Restore' : 'Suspend' }}"

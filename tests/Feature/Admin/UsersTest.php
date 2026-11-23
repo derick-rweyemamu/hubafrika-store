@@ -4,7 +4,9 @@ namespace Tests\Feature\Admin;
 
 use App\Livewire\Admin\Users;
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -238,5 +240,34 @@ class UsersTest extends CatalogTestCase
             ->set('status', 'unverified')
             ->assertSee('Bakari Unverified')
             ->assertDontSee('Chidi Suspended');
+    }
+
+    public function test_admin_can_send_password_reset_email_to_user(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['email' => 'resetme@example.com']);
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(Users::class)
+            ->assertSee('Send password reset email')
+            ->call('sendPasswordReset', $user->id)
+            ->assertSee('Password reset email sent to resetme@example.com.');
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_admin_cannot_send_password_reset_to_another_admin(): void
+    {
+        Notification::fake();
+
+        $otherAdmin = User::factory()->create(['is_admin' => true]);
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(Users::class)
+            ->call('sendPasswordReset', $otherAdmin->id)
+            ->assertStatus(404);
+
+        Notification::assertNothingSent();
     }
 }
