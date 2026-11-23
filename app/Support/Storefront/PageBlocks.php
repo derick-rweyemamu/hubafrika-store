@@ -2,6 +2,8 @@
 
 namespace App\Support\Storefront;
 
+use App\Services\RecaptchaService;
+
 /**
  * Script for the page-builder blocks that need interaction.
  *
@@ -21,6 +23,16 @@ class PageBlocks
     {
         $encodedShareUrl = json_encode(
             $shareUrl ?? '',
+            JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        );
+        $recaptcha = app(RecaptchaService::class);
+        $recaptchaSiteKey = $recaptcha->isEnabled() ? $recaptcha->siteKey() : '';
+        $encodedRecaptchaKey = json_encode(
+            $recaptchaSiteKey,
+            JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        );
+        $csrfToken = json_encode(
+            csrf_token(),
             JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
         );
 
@@ -271,6 +283,12 @@ function run(){
         var form=e.target&&e.target.closest?e.target.closest('form'):null;
         if(!form)return;
         var action=form.getAttribute('action')||'';
+        function getRecaptchaToken(act){
+            return new Promise(function(resolve){
+                if(!recaptchaKey||typeof grecaptcha==='undefined'||!grecaptcha.ready){resolve('');return;}
+                try{grecaptcha.ready(function(){grecaptcha.execute(recaptchaKey,{action:act}).then(function(t){resolve(t||'');}).catch(function(){resolve('');});});}catch(err){resolve('');}
+            });
+        }
         if(action.indexOf('/newsletter')!==-1){
             e.preventDefault();
             var emailInput=form.querySelector('input[type="email"],input[name="email"]');
@@ -279,28 +297,63 @@ function run(){
             var submitBtn=form.querySelector('button[type="submit"]');
             var originalLabel=submitBtn?submitBtn.innerHTML:'';
             if(submitBtn){submitBtn.disabled=true;submitBtn.innerHTML='Subscribing...';}
-            fetch('/newsletter',{
-                method:'POST',
-                headers:{
-                    'Content-Type':'application/json',
-                    'Accept':'application/json',
-                    'X-Requested-With':'XMLHttpRequest'
-                },
-                body:JSON.stringify({email:emailVal,source:'cms_page'})
-            }).then(function(r){return r.json();})
-            .then(function(d){
-                alert(d.message||'Thanks for subscribing. We will keep you posted.');
-                if(emailInput)emailInput.value='';
-                if(submitBtn){submitBtn.disabled=false;submitBtn.innerHTML='Subscribed!';}
+            getRecaptchaToken('newsletter').then(function(rcToken){
+                return fetch('/newsletter',{
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'Accept':'application/json',
+                        'X-CSRF-TOKEN':csrfToken,
+                        'X-Requested-With':'XMLHttpRequest'
+                    },
+                    body:JSON.stringify({email:emailVal,source:'cms_page','g-recaptcha-response':rcToken})
+                });
+            }).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});})
+            .then(function(res){
+                alert(res.data.message||(res.ok?'Thanks for subscribing. We will keep you posted.':'Subscription failed. Please try again.'));
+                if(res.ok&&emailInput)emailInput.value='';
+                if(submitBtn){submitBtn.disabled=false;submitBtn.innerHTML=res.ok?'Subscribed!':originalLabel;}
             }).catch(function(){
-                alert('Thanks for subscribing. We will keep you posted.');
+                alert('Unable to subscribe right now. Please try again.');
                 if(submitBtn){submitBtn.disabled=false;submitBtn.innerHTML=originalLabel;}
             });
             return;
         }
-        if(!action){
+        if(action.indexOf('/contact')!==-1||!action){
             e.preventDefault();
-            alert('Inquiry received. Thank you!');
+            var nameEl=form.querySelector('input[name="name"],input[type="text"]');
+            var mailEl=form.querySelector('input[name="email"],input[type="email"]');
+            var subjEl=form.querySelector('input[name="subject"]');
+            var msgEl=form.querySelector('textarea[name="message"],textarea');
+            var btn=form.querySelector('button[type="submit"]');
+            var orig=btn?btn.innerHTML:'';
+            if(btn){btn.disabled=true;btn.innerHTML='Sending...';}
+            getRecaptchaToken('contact').then(function(rcToken){
+                return fetch('/contact',{
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json',
+                        'Accept':'application/json',
+                        'X-CSRF-TOKEN':csrfToken,
+                        'X-Requested-With':'XMLHttpRequest'
+                    },
+                    body:JSON.stringify({
+                        name:nameEl?nameEl.value.trim():'',
+                        email:mailEl?mailEl.value.trim():'',
+                        subject:subjEl?subjEl.value.trim():'',
+                        message:msgEl?msgEl.value.trim():'',
+                        'g-recaptcha-response':rcToken
+                    })
+                });
+            }).then(function(r){return r.json().then(function(d){return {ok:r.ok,data:d};});})
+            .then(function(res){
+                alert(res.data.message||(res.ok?'Inquiry received. Thank you!':'Failed to send inquiry.'));
+                if(res.ok){form.reset();}
+                if(btn){btn.disabled=false;btn.innerHTML=orig;}
+            }).catch(function(){
+                alert('Unable to send inquiry right now. Please try again.');
+                if(btn){btn.disabled=false;btn.innerHTML=orig;}
+            });
         }
     });
 }
@@ -308,8 +361,11 @@ if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded'
 JS;
 
         $attribute = $nonce === '' ? '' : ' nonce="'.e($nonce).'"';
+        $recaptchaScriptTag = $recaptchaSiteKey !== ''
+            ? '<script src="https://www.google.com/recaptcha/api.js?render='.e($recaptchaSiteKey).'" async defer></script>'
+            : '';
 
-        return '<script'.$attribute.'>(function(){var shareUrl='.$encodedShareUrl.';'.$js.'})();</script>';
+        return $recaptchaScriptTag.'<script'.$attribute.'>(function(){var shareUrl='.$encodedShareUrl.';var recaptchaKey='.$encodedRecaptchaKey.';var csrfToken='.$csrfToken.';'.$js.'})();</script>';
     }
 
     /**

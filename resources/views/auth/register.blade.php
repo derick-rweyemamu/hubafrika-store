@@ -1,5 +1,5 @@
 <x-guest-layout :title="__('Create account')" :subtitle="__('Join the store to save favourites and follow every order.')">
-    <form method="POST" action="{{ route('register') }}" class="space-y-5">
+    <form method="POST" action="{{ route('register') }}" data-recaptcha-action="register" class="space-y-5">
         @csrf
 
         <!-- Name -->
@@ -33,6 +33,10 @@
             :label="__('Confirm password')"
             autocomplete="new-password"
         />
+
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600">{{ $message }}</p>
+        @enderror
 
         <button type="submit" class="auth-btn">
             {{ __('Create account') }}

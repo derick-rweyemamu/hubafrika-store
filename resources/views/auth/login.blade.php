@@ -2,7 +2,7 @@
     <!-- Session Status -->
     <x-flash-toast />
 
-    <form method="POST" action="{{ route('login') }}" class="space-y-6">
+    <form method="POST" action="{{ route('login') }}" data-recaptcha-action="login" class="space-y-6">
         @csrf
 
         <!-- Email Address -->
@@ -35,6 +35,10 @@
                 </a>
             @endif
         </div>
+
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600">{{ $message }}</p>
+        @enderror
 
         <button type="submit" class="auth-btn">
             {{ __('Log in') }}

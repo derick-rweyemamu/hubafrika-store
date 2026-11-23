@@ -1224,27 +1224,27 @@ content: `
                     <h3 class="text-2xl font-extrabold text-slate-900 mt-2">Send Us an Inquiry</h3>
                     <p class="text-xs sm:text-sm text-slate-500 mt-1">Our clean energy specialists will respond within 24 hours.</p>
                 </div>
-                <form onsubmit="event.preventDefault(); alert('Inquiry received. Thank you!');" class="space-y-4">
+                <form action="/contact" method="POST" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
-                            <input type="text" placeholder="John Doe" required
+                            <input type="text" name="name" placeholder="John Doe" required
                                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
-                            <input type="email" placeholder="john@example.com" required
+                            <input type="email" name="email" placeholder="john@example.com" required
                                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Subject / System of Interest</label>
-                        <input type="text" placeholder="e.g. Solar Home System / Hybrid Inverters"
+                        <input type="text" name="subject" placeholder="e.g. Solar Home System / Hybrid Inverters"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Your Message</label>
-                        <textarea rows="4" placeholder="How can we help you?" required
+                        <textarea name="message" rows="4" placeholder="How can we help you?" required
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50"></textarea>
                     </div>
                     <button type="submit"
@@ -1706,27 +1706,27 @@ content: `
                     <h3 class="text-2xl font-extrabold text-slate-900 mt-2">Send Us an Inquiry</h3>
                     <p class="text-xs sm:text-sm text-slate-500 mt-1">Our clean energy specialists will respond within 24 hours.</p>
                 </div>
-                <form onsubmit="event.preventDefault(); alert('Inquiry received. Thank you!');" class="space-y-4">
+                <form action="/contact" method="POST" class="space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Full Name</label>
-                            <input type="text" placeholder="John Doe" required
+                            <input type="text" name="name" placeholder="John Doe" required
                                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address</label>
-                            <input type="email" placeholder="john@example.com" required
+                            <input type="email" name="email" placeholder="john@example.com" required
                                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Subject / System of Interest</label>
-                        <input type="text" placeholder="e.g. Solar Home System / Hybrid Inverters"
+                        <input type="text" name="subject" placeholder="e.g. Solar Home System / Hybrid Inverters"
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Your Message</label>
-                        <textarea rows="4" placeholder="How can we help you?" required
+                        <textarea name="message" rows="4" placeholder="How can we help you?" required
                             class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 bg-slate-50/50"></textarea>
                     </div>
                     <button type="submit"

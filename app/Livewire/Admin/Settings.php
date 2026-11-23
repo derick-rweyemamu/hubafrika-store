@@ -45,6 +45,11 @@ class Settings extends Component
             'description' => 'Customer-facing palettes, typography, and sizing.',
             'groups' => ['Frontend palettes', 'Frontend fonts', 'Frontend font sizes'],
         ],
+        'security' => [
+            'label' => 'Security & Anti-Spam',
+            'description' => 'Google reCAPTCHA v3 keys and score threshold to protect public forms.',
+            'groups' => ['Google reCAPTCHA v3'],
+        ],
     ];
 
     private const FONT_FAMILIES = [
@@ -90,6 +95,10 @@ class Settings extends Component
         'selcom_api_key' => 'API Key from Selcom Developer Portal.',
         'selcom_api_secret' => 'API Secret from Selcom Developer Portal.',
         'selcom_instructions' => 'Shown to customer when choosing Selcom at checkout.',
+        'recaptcha_enabled' => 'Protects registration, login, password reset, newsletter, contact, and checkout forms.',
+        'recaptcha_site_key' => 'Public v3 Site Key from Google reCAPTCHA Admin Console.',
+        'recaptcha_secret_key' => 'Private v3 Secret Key from Google reCAPTCHA Admin Console.',
+        'recaptcha_min_score' => 'Minimum score (0.0 to 1.0) required to pass. Recommended: 0.5.',
     ];
 
     public bool $isOpen = false;
@@ -579,6 +588,10 @@ class Settings extends Component
             'selcom_api_key' => ['group' => 'Selcom Gateway', 'label' => 'API Key', 'kind' => 'secret'],
             'selcom_api_secret' => ['group' => 'Selcom Gateway', 'label' => 'API Secret', 'kind' => 'secret'],
             'selcom_instructions' => ['group' => 'Selcom Gateway', 'label' => 'Payment instructions', 'kind' => 'textarea'],
+            'recaptcha_enabled' => ['group' => 'Google reCAPTCHA v3', 'label' => 'Enable Google reCAPTCHA v3', 'kind' => 'boolean'],
+            'recaptcha_site_key' => ['group' => 'Google reCAPTCHA v3', 'label' => 'reCAPTCHA Site Key', 'kind' => 'text'],
+            'recaptcha_secret_key' => ['group' => 'Google reCAPTCHA v3', 'label' => 'reCAPTCHA Secret Key', 'kind' => 'secret'],
+            'recaptcha_min_score' => ['group' => 'Google reCAPTCHA v3', 'label' => 'Minimum score threshold (0.0 - 1.0)', 'kind' => 'recaptcha_score'],
             'maintenance_mode' => ['group' => 'Basic settings', 'label' => 'Maintenance mode', 'kind' => 'boolean'],
             'backend_palette_active' => ['group' => 'Backend palettes', 'label' => 'Active backend palette', 'kind' => 'palette_selection'],
             'frontend_palette_active' => ['group' => 'Frontend palettes', 'label' => 'Active frontend palette', 'kind' => 'palette_selection'],
@@ -752,6 +765,7 @@ class Settings extends Component
             'language' => ['required', 'regex:/\A[a-zA-Z]{2,5}(?:[-_][a-zA-Z0-9]{2,8})?\z/'],
             'lipa_number' => ['required', 'regex:/\A\d{5,9}\z/'],
             'selcom_mode' => ['required', Rule::in(['sandbox', 'live', 'simulation'])],
+            'recaptcha_score' => ['required', 'numeric', 'min:0', 'max:1'],
             'palette_selection' => ['required', 'integer', 'between:1,4'],
             'phone' => ['nullable', 'regex:/\A[+\d\s().-]{5,35}\z/'],
             'secret' => ['nullable', 'string', 'max:255'],

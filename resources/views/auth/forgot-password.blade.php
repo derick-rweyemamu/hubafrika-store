@@ -2,7 +2,7 @@
     <!-- Session Status -->
     <x-flash-toast />
 
-    <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
+    <form method="POST" action="{{ route('password.email') }}" data-recaptcha-action="forgot_password" class="space-y-6">
         @csrf
 
         <!-- Email Address -->
@@ -18,6 +18,10 @@
         <p class="auth-muted text-center text-xs leading-relaxed">
             {{ __('We will email a link that lets you choose a new password. The link expires after 60 minutes.') }}
         </p>
+
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600">{{ $message }}</p>
+        @enderror
 
         <button type="submit" class="auth-btn">
             {{ __('Email reset link') }}

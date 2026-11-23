@@ -191,6 +191,7 @@
         </div>
 
         <x-confirm-dialog />
+        <x-recaptcha-script />
         @livewireScripts
     </body>
 </html>

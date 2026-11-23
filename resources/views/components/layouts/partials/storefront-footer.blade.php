@@ -35,6 +35,9 @@
         this.statusMessage = '';
         try {
             const token = document.querySelector('meta[name=\'csrf-token\']')?.content || '{{ csrf_token() }}';
+            const recaptchaToken = window.hubafrikaRecaptchaToken
+                ? await window.hubafrikaRecaptchaToken('newsletter')
+                : '';
             const res = await fetch('{{ route('newsletter.subscribe') }}', {
                 method: 'POST',
                 headers: {
@@ -43,14 +46,18 @@
                     'X-CSRF-TOKEN': token,
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify({ email: trimmed, source: 'footer' })
+                body: JSON.stringify({
+                    email: trimmed,
+                    source: 'footer',
+                    'g-recaptcha-response': recaptchaToken
+                })
             });
             const data = await res.json();
             if (res.ok) {
                 this.statusMessage = data.message || '{{ __('Thanks for subscribing. We will keep you posted.') }}';
                 this.email = '';
             } else {
-                this.errorMessage = data.errors?.email?.[0] || data.message || '{{ __('Failed to subscribe. Please try again.') }}';
+                this.errorMessage = data.errors?.email?.[0] || data.errors?.['g-recaptcha-response']?.[0] || data.message || '{{ __('Failed to subscribe. Please try again.') }}';
             }
         } catch (e) {
             this.errorMessage = '{{ __('Something went wrong. Please check your connection.') }}';

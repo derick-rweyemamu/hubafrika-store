@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\NewsletterSubscriber;
+use App\Rules\RecaptchaV3;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class NewsletterSubscribeController extends Controller
             'email' => ['required', 'string', 'email', 'max:191'],
             'name' => ['nullable', 'string', 'max:191'],
             'source' => ['nullable', 'string', 'max:50'],
+            'g-recaptcha-response' => [new RecaptchaV3('newsletter')],
         ]);
 
         $subscriber = NewsletterSubscriber::query()->firstOrNew([

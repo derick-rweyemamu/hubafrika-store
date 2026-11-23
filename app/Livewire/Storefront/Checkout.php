@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\State;
 use App\Models\User;
+use App\Services\RecaptchaService;
 use App\Services\Selcom\SelcomClient;
 use App\Support\Storefront\CartSession;
 use Illuminate\Auth\Events\Registered;
@@ -70,6 +71,8 @@ class Checkout extends Component
     public ?string $selcomLookupError = null;
 
     public bool $isLookingUpName = false;
+
+    public string $recaptchaToken = '';
 
     public function mount(): void
     {
@@ -230,8 +233,18 @@ class Checkout extends Component
         }
     }
 
-    public function placeOrder(): void
+    public function placeOrder(?string $recaptchaToken = null): void
     {
+        if ($recaptchaToken !== null) {
+            $this->recaptchaToken = $recaptchaToken;
+        }
+
+        app(RecaptchaService::class)->verifyOrFail(
+            $this->recaptchaToken,
+            'checkout',
+            'checkout',
+        );
+
         $customer = auth()->user();
 
         if (! CartSession::query($customer)->exists()) {

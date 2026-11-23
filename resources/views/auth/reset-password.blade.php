@@ -1,5 +1,5 @@
 <x-guest-layout :title="__('Choose a password')" :subtitle="__('Pick a new password for your account, then sign in again.')">
-    <form method="POST" action="{{ route('password.store') }}" class="space-y-5">
+    <form method="POST" action="{{ route('password.store') }}" data-recaptcha-action="reset_password" class="space-y-5">
         @csrf
 
         <!-- Password Reset Token -->
@@ -28,6 +28,10 @@
             :label="__('Confirm password')"
             autocomplete="new-password"
         />
+
+        @error('g-recaptcha-response')
+            <p class="text-sm text-red-600">{{ $message }}</p>
+        @enderror
 
         <button type="submit" class="auth-btn">
             {{ __('Reset password') }}

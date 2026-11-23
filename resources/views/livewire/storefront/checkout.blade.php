@@ -6,7 +6,18 @@
             <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
         @enderror
 
-        <form wire:submit="placeOrder" class="space-y-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <form
+            x-data="{
+                async submitCheckout() {
+                    const token = window.hubafrikaRecaptchaToken
+                        ? await window.hubafrikaRecaptchaToken('checkout')
+                        : '';
+                    await $wire.placeOrder(token);
+                }
+            }"
+            @submit.prevent="submitCheckout"
+            class="space-y-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
+        >
             @guest
                 <section class="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950">
                     <div>

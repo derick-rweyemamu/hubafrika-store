@@ -39,6 +39,7 @@
     </div>
     @include('components.layouts.partials.whatsapp-float')
     <x-confirm-dialog />
+    <x-recaptcha-script />
     @livewireScripts
 </body>
 </html>

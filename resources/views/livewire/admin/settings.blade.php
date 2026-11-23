@@ -633,8 +633,16 @@
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">The 5 to 9 digit merchant number customers pay into. Lipa is only offered at checkout when this is set.</p>
                             @elseif ($settingKind === 'secret')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    {{ str_starts_with($settingType ?? '', 'selcom_') ? 'Selcom API credential. Stored securely and masked.' : 'Used to verify the Vodacom callback signature. Leave empty to keep the callback disabled.' }}
+                                    @if (str_starts_with($settingType ?? '', 'selcom_'))
+                                        Selcom API credential. Stored securely and masked.
+                                    @elseif (str_starts_with($settingType ?? '', 'recaptcha_'))
+                                        Google reCAPTCHA v3 secret key. Stored securely in database and masked.
+                                    @else
+                                        Used to verify the Vodacom callback signature. Leave empty to keep the callback disabled.
+                                    @endif
                                 </p>
+                            @elseif ($settingKind === 'recaptcha_score')
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter a score between 0.0 (most permissive) and 1.0 (strictest). Google recommends 0.5.</p>
                             @elseif ($settingKind === 'email')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed on the left side of the top bar as a mailto link. Leave empty to hide.</p>
                             @elseif ($settingKind === 'phone')

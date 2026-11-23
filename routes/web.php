@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\Admin\CmsPageBuilderController;
 use App\Http\Controllers\Admin\MediaUploadController;
+use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\NewsletterSubscribeController;
 use App\Http\Controllers\Payments\SelcomCallbackController;
 use App\Http\Controllers\Payments\VodacomCallbackController;
@@ -63,6 +64,10 @@ Route::get('/post/{slug}', StorefrontCmsPost::class)->name('posts.show');
 Route::post('/newsletter', NewsletterSubscribeController::class)
     ->middleware('throttle:10,1')
     ->name('newsletter.subscribe');
+
+Route::post('/contact', ContactInquiryController::class)
+    ->middleware('throttle:20,1')
+    ->name('contact.submit');
 
 Route::get('/newsletter/unsubscribe/{subscriber}', [NewsletterSubscribeController::class, 'unsubscribe'])
     ->name('newsletter.unsubscribe');
