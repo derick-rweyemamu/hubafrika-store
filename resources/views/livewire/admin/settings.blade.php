@@ -509,6 +509,17 @@
                             </select>
                             @error('value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
+                    @elseif ($settingKind === 'selcom_mode')
+                        <div>
+                            <label for="setting-value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Environment Mode</label>
+                            <select id="setting-value" wire:model="value" class="admin-primary-focus mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                                <option value="sandbox">Sandbox (Testing / Selcom Test Gateway)</option>
+                                <option value="simulation">Simulation (Local Mock Simulator - No credentials required)</option>
+                                <option value="live">Live (Production Payments)</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Use "simulation" for instant testing without Selcom keys, "sandbox" for Selcom test server, or "live" for production.</p>
+                            @error('value') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
                     @elseif ($settingKind === 'palette_selection')
                         <div>
                             <label for="setting-value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Active palette</label>
@@ -621,7 +632,9 @@
                             @elseif ($settingKind === 'lipa_number')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">The 5 to 9 digit merchant number customers pay into. Lipa is only offered at checkout when this is set.</p>
                             @elseif ($settingKind === 'secret')
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Used to verify the Vodacom callback signature. Leave empty to keep the callback disabled.</p>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ str_starts_with($settingType ?? '', 'selcom_') ? 'Selcom API credential. Stored securely and masked.' : 'Used to verify the Vodacom callback signature. Leave empty to keep the callback disabled.' }}
+                                </p>
                             @elseif ($settingKind === 'email')
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Displayed on the left side of the top bar as a mailto link. Leave empty to hide.</p>
                             @elseif ($settingKind === 'phone')

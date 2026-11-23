@@ -118,6 +118,8 @@
                             <span class="block font-semibold text-gray-800 dark:text-gray-100">{{ $label }}</span>
                             @if ($method === \App\Models\Payment::METHOD_CASH_ON_DELIVERY)
                                 <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay the courier when your order arrives.</span>
+                            @elseif ($method === \App\Models\Payment::METHOD_SELCOM)
+                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay instantly via Vodacom M-Pesa, Tigo Pesa, Airtel Money, Halopesa or Card.</span>
                             @else
                                 <span class="mt-1 block text-gray-600 dark:text-gray-400">Send the money to the Lipa number below, then submit the transaction ID from your SMS.</span>
                             @endif
@@ -155,6 +157,66 @@
                         </div>
                     </div>
                     <p class="text-xs text-amber-900/80 dark:text-amber-100/80">Your order is reserved once the transaction ID is submitted. We verify it against the Lipa statement before dispatch.</p>
+                </div>
+            @elseif ($paymentMethod === \App\Models\Payment::METHOD_SELCOM)
+                <div class="space-y-4 rounded-lg border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/60">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-semibold text-blue-950 dark:text-blue-100">Selcom Payment Gateway</p>
+                            <p class="text-xs text-blue-800 dark:text-blue-200">
+                                {{ $selcomAccount['mode'] === 'simulation' ? 'Local Simulation Mode (Testing)' : ($selcomAccount['mode'] === 'sandbox' ? 'Selcom Sandbox Environment' : 'Selcom Secure Live Gateway') }}
+                            </p>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            Instant Mobile & Card Payment
+                        </span>
+                    </div>
+
+                    @if (\App\Support\RichText::plainText($selcomAccount['instructions']) !== '')
+                        <div class="sf-rich-text sf-rich-text--compact text-sm text-blue-900/90 dark:text-blue-100/90">
+                            {!! \App\Support\RichText::toHtml($selcomAccount['instructions']) !!}
+                        </div>
+                    @endif
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div>
+                            <label for="selcom-network" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Mobile Network *</label>
+                            <select id="selcom-network" wire:model.live="selcomNetwork" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                                <option value="VODACOM">Vodacom M-Pesa</option>
+                                <option value="AIRTEL">Airtel Money</option>
+                                <option value="TIGO">Tigo Pesa</option>
+                                <option value="HALOPESA">Halopesa</option>
+                            </select>
+                            @error('selcomNetwork') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="selcom-phone" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Payer Mobile Number *</label>
+                            <div class="flex gap-2">
+                                <input id="selcom-phone" type="tel" wire:model="selcomPhone" autocomplete="tel" placeholder="0754000000" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                                <button type="button" wire:click="lookupSelcomAccount" wire:loading.attr="disabled" class="shrink-0 rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100">
+                                    <span wire:loading.remove wire:target="lookupSelcomAccount">Verify Name</span>
+                                    <span wire:loading wire:target="lookupSelcomAccount">Checking...</span>
+                                </button>
+                            </div>
+                            @error('selcomPhone') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
+                    @if ($selcomLookupName)
+                        <div class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-2.5 text-xs text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+                            <svg class="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                            <span>Verified Account: <strong class="font-semibold">{{ $selcomLookupName }}</strong></span>
+                        </div>
+                    @elseif ($selcomLookupError)
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                            {{ $selcomLookupError }}
+                        </div>
+                    @endif
+
+                    <p class="text-xs text-blue-900/80 dark:text-blue-100/80">
+                        When you place this order, Selcom will prompt payment directly to your phone or provide a secure payment link.
+                    </p>
                 </div>
             @endif
             <button type="submit" wire:loading.attr="disabled" class="w-full rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">

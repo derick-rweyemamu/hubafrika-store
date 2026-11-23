@@ -112,6 +112,24 @@
                             </button>
                         </form>
                     </div>
+                @elseif ($order->payment_method === \App\Models\Payment::METHOD_SELCOM && $order->payment_status !== 'paid')
+                    <div class="mt-4 space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+                        <p class="text-sm font-semibold text-blue-900 dark:text-blue-100">Selcom Mobile Money Payment</p>
+                        <p class="text-xs text-blue-800 dark:text-blue-200">
+                            Awaiting automated payment confirmation. You will receive an SMS push prompt on your mobile phone to approve the payment.
+                        </p>
+                        @if ($order->payment_reference)
+                            <p class="text-xs text-blue-800 dark:text-blue-200">Reference: <span class="font-mono font-semibold">{{ $order->payment_reference }}</span></p>
+                        @endif
+                        @if (!app()->isProduction() || \App\Models\Payment::settings()['selcom_mode'] !== 'live')
+                            <form action="{{ route('payments.selcom.simulate', ['order' => $order]) }}" method="POST" class="pt-1">
+                                @csrf
+                                <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-sm">
+                                    Simulate Successful Selcom Payment (Test Mode)
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 @elseif ($order->payment_status === 'paid')
                     <p class="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">Paid in full. Thank you.</p>
                 @elseif ($order->payment_status === 'failed')

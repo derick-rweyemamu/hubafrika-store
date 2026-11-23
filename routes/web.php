@@ -4,6 +4,7 @@ use App\Http\Controllers\AddToCartController;
 use App\Http\Controllers\Admin\CmsPageBuilderController;
 use App\Http\Controllers\Admin\MediaUploadController;
 use App\Http\Controllers\NewsletterSubscribeController;
+use App\Http\Controllers\Payments\SelcomCallbackController;
 use App\Http\Controllers\Payments\VodacomCallbackController;
 use App\Http\Controllers\ProfileController;
 use App\Livewire\Admin\Brands;
@@ -70,6 +71,15 @@ Route::get('/newsletter/unsubscribe/{subscriber}', [NewsletterSubscribeControlle
 Route::post('/payments/vodacom/callback', VodacomCallbackController::class)
     ->middleware('throttle:60,1')
     ->name('payments.vodacom.callback');
+
+// Selcom payment callback. Signature-verified, CSRF-exempt (see bootstrap/app.php).
+Route::post('/payments/selcom/callback', SelcomCallbackController::class)
+    ->middleware('throttle:60,1')
+    ->name('payments.selcom.callback');
+
+Route::post('/payments/selcom/simulate/{order}', [SelcomCallbackController::class, 'simulate'])
+    ->middleware(['web', 'auth'])
+    ->name('payments.selcom.simulate');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

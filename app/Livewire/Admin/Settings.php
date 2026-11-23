@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Livewire\Concerns\PicksLibraryMedia;
 use App\Models\BusinessSetting;
 use App\Support\RichText;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -32,7 +33,7 @@ class Settings extends Component
         'shipping-checkout' => [
             'label' => 'Shipping & payment',
             'description' => 'Delivery costs and the payment methods customers can choose.',
-            'groups' => ['Shipping', 'Payment methods', 'Vodacom Lipa'],
+            'groups' => ['Shipping', 'Payment methods', 'Vodacom Lipa', 'Selcom Gateway'],
         ],
         'admin-design' => [
             'label' => 'Admin design',
@@ -83,6 +84,12 @@ class Settings extends Component
         'lipa_business_name' => 'Shown in the payment prompt.',
         'lipa_instructions' => 'Shown to the customer after checkout.',
         'lipa_webhook_secret' => 'Verifies the Vodacom callback signature.',
+        'selcom_enabled' => 'Accepts mobile money and cards via Selcom.',
+        'selcom_mode' => 'sandbox (testing), live (production), or simulation (built-in mock).',
+        'selcom_vendor_id' => 'Selcom merchant vendor ID / till.',
+        'selcom_api_key' => 'API Key from Selcom Developer Portal.',
+        'selcom_api_secret' => 'API Secret from Selcom Developer Portal.',
+        'selcom_instructions' => 'Shown to customer when choosing Selcom at checkout.',
     ];
 
     public bool $isOpen = false;
@@ -357,36 +364,38 @@ class Settings extends Component
         $this->paletteDataInvalid = false;
     }
 
+    private const FONT_FAMILY_CSS = [
+        'Inter' => 'Inter, sans-serif',
+        'Poppins' => 'Poppins, sans-serif',
+        'Playfair Display' => '"Playfair Display", serif',
+        'Plus Jakarta Sans' => '"Plus Jakarta Sans", sans-serif',
+        'Arial' => 'Arial, sans-serif',
+        'Georgia' => 'Georgia, serif',
+        'System' => 'system-ui, sans-serif',
+    ];
+
+    private const FONT_ROLE_DESCRIPTIONS = [
+        'font_backend_primary_header' => 'Page and section titles',
+        'font_backend_sub_header' => 'Subtitles and labels',
+        'font_backend_accent' => 'Highlights and quotes',
+        'font_backend_body' => 'Paragraphs and tables',
+        'font_frontend_primary_header' => 'Page and section titles',
+        'font_frontend_sub_header' => 'Subtitles and labels',
+        'font_frontend_accent' => 'Highlights and quotes',
+        'font_frontend_body' => 'Paragraphs and product details',
+    ];
+
+    private const FONT_SIZE_DESCRIPTIONS = [
+        'font_size_base' => 'Default paragraph and interface text',
+        'font_size_heading' => 'Page and section titles',
+        'font_size_sub' => 'Subtitles and supporting text',
+        'font_size_accent' => 'Highlighted text and callouts',
+        'font_size_small' => 'Captions and fine print',
+    ];
+
     public function render()
     {
         abort_unless(auth()->user()?->can('settings.view'), 403);
-
-        $fontFamilyCss = [
-            'Inter' => 'Inter, sans-serif',
-            'Poppins' => 'Poppins, sans-serif',
-            'Playfair Display' => '"Playfair Display", serif',
-            'Plus Jakarta Sans' => '"Plus Jakarta Sans", sans-serif',
-            'Arial' => 'Arial, sans-serif',
-            'Georgia' => 'Georgia, serif',
-            'System' => 'system-ui, sans-serif',
-        ];
-        $fontRoleDescriptions = [
-            'font_backend_primary_header' => 'Page and section titles',
-            'font_backend_sub_header' => 'Subtitles and labels',
-            'font_backend_accent' => 'Highlights and quotes',
-            'font_backend_body' => 'Paragraphs and tables',
-            'font_frontend_primary_header' => 'Page and section titles',
-            'font_frontend_sub_header' => 'Subtitles and labels',
-            'font_frontend_accent' => 'Highlights and quotes',
-            'font_frontend_body' => 'Paragraphs and product details',
-        ];
-        $fontSizeDescriptions = [
-            'font_size_base' => 'Default paragraph and interface text',
-            'font_size_heading' => 'Page and section titles',
-            'font_size_sub' => 'Subtitles and supporting text',
-            'font_size_accent' => 'Highlighted text and callouts',
-            'font_size_small' => 'Captions and fine print',
-        ];
 
         $definitions = $this->definitions();
         $settingsByType = BusinessSetting::query()
@@ -394,8 +403,29 @@ class Settings extends Component
             ->get()
             ->keyBy('type');
 
-        $settingGroups = [];
         $maintenanceMode = $settingsByType->get('maintenance_mode')?->value === '1';
+        $settingGroups = $this->buildSettingGroups($definitions, $settingsByType);
+        $tabs = $this->buildTabs($settingGroups);
+
+        if (! array_key_exists($this->activeTab, $tabs)) {
+            $this->activeTab = 'general';
+        }
+
+        return view('livewire.admin.settings', [
+            'tabs' => $tabs,
+            'activeSettings' => $tabs[$this->activeTab]['settings'],
+            'maintenanceMode' => $maintenanceMode,
+        ])->layout('components.layouts.admin', ['title' => 'Settings']);
+    }
+
+    /**
+     * @param  array<string, array{group: string, label: string, kind: string}>  $definitions
+     * @param  Collection<string, BusinessSetting>  $settingsByType
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function buildSettingGroups(array $definitions, Collection $settingsByType): array
+    {
+        $settingGroups = [];
 
         foreach ($definitions as $type => $definition) {
             $setting = $settingsByType->get($type);
@@ -408,61 +438,90 @@ class Settings extends Component
                 continue;
             }
 
-            $settingValue = $setting?->value ?? '';
-            $paletteData = $definition['kind'] === 'palette'
-                ? json_decode($settingValue, true)
-                : null;
-            $palettePrefix = str_starts_with($type, 'backend_palette_') ? 'backend' : 'frontend';
-            $activePalette = $settingsByType->get("{$palettePrefix}_palette_active")?->value ?? '1';
-            $isValidPalette = is_array($paletteData)
-                && collect(self::PALETTE_FIELDS)->every(
-                    fn (string $field): bool => isset($paletteData[$field])
-                        && preg_match('/\A#[0-9A-Fa-f]{6}\z/', (string) $paletteData[$field]) === 1,
-                );
-
-            $imageUrl = $definition['kind'] === 'image'
-                ? $this->storedImageUrl($setting)
-                : null;
-            $displayValue = match ($definition['kind']) {
-                'boolean' => $settingValue === '1' ? 'Enabled' : 'Disabled',
-                'palette' => is_array($paletteData) ? ($paletteData['name'] ?? 'Unnamed palette') : 'Invalid palette JSON',
-                'palette_selection' => 'Palette '.$settingValue,
-                'image' => $imageUrl === null ? 'Not uploaded' : 'Uploaded',
-                'secret' => $settingValue === '' ? 'Not set' : '••••••••',
-                'textarea' => ($plain = RichText::plainText($settingValue, 220)) === '' ? 'Not set' : $plain,
-                default => $settingValue === '' ? 'Not set' : $settingValue,
-            };
-
-            $settingGroups[$definition['group']][] = [
-                'type' => $type,
-                'label' => $definition['label'],
-                'kind' => $definition['kind'],
-                'displayValue' => $displayValue,
-                'fontFamilyCss' => $definition['kind'] === 'font'
-                    ? ($fontFamilyCss[$settingValue] ?? $fontFamilyCss['System'])
-                    : null,
-                'fontRoleDescription' => $fontRoleDescriptions[$type] ?? null,
-                'fontSizeCss' => $definition['kind'] === 'font_size'
-                    && preg_match('/\A\d+(?:\.\d+)?(?:px|rem|em|%)\z/', $settingValue) === 1
-                    ? $settingValue
-                    : null,
-                'fontSizeDescription' => $fontSizeDescriptions[$type] ?? null,
-                'palette' => $paletteData,
-                'isValidPalette' => $definition['kind'] === 'palette' && $isValidPalette,
-                'isActive' => $definition['kind'] === 'palette'
-                    && substr($type, -1) === $activePalette,
-                'previewColor' => $definition['kind'] === 'color'
-                    ? $setting->value
-                    : ($definition['kind'] === 'palette' && is_array($paletteData)
-                        ? ($paletteData['primary'] ?? null)
-                        : null),
-                'imageUrl' => $imageUrl,
-                'exists' => $setting !== null,
-                'isEnabled' => $definition['kind'] === 'boolean' && $settingValue === '1',
-                'hint' => self::COMMERCE_HINTS[$type] ?? null,
-            ];
+            $settingGroups[$definition['group']][] = $this->formatSettingItem(
+                $type,
+                $definition,
+                $setting,
+                $settingsByType,
+            );
         }
 
+        return $settingGroups;
+    }
+
+    /**
+     * @param  array{group: string, label: string, kind: string}  $definition
+     * @param  Collection<string, BusinessSetting>  $settingsByType
+     * @return array<string, mixed>
+     */
+    private function formatSettingItem(
+        string $type,
+        array $definition,
+        ?BusinessSetting $setting,
+        Collection $settingsByType,
+    ): array {
+        $settingValue = $setting?->value ?? '';
+        $paletteData = $definition['kind'] === 'palette'
+            ? json_decode($settingValue, true)
+            : null;
+        $palettePrefix = str_starts_with($type, 'backend_palette_') ? 'backend' : 'frontend';
+        $activePalette = $settingsByType->get("{$palettePrefix}_palette_active")?->value ?? '1';
+        $isValidPalette = is_array($paletteData)
+            && collect(self::PALETTE_FIELDS)->every(
+                fn (string $field): bool => isset($paletteData[$field])
+                    && preg_match('/\A#[0-9A-Fa-f]{6}\z/', (string) $paletteData[$field]) === 1,
+            );
+
+        $imageUrl = $definition['kind'] === 'image'
+            ? $this->storedImageUrl($setting)
+            : null;
+
+        $displayValue = match ($definition['kind']) {
+            'boolean' => $settingValue === '1' ? 'Enabled' : 'Disabled',
+            'palette' => is_array($paletteData) ? ($paletteData['name'] ?? 'Unnamed palette') : 'Invalid palette JSON',
+            'palette_selection' => 'Palette '.$settingValue,
+            'image' => $imageUrl === null ? 'Not uploaded' : 'Uploaded',
+            'secret' => $settingValue === '' ? 'Not set' : '••••••••',
+            'textarea' => ($plain = RichText::plainText($settingValue, 220)) === '' ? 'Not set' : $plain,
+            default => $settingValue === '' ? 'Not set' : $settingValue,
+        };
+
+        return [
+            'type' => $type,
+            'label' => $definition['label'],
+            'kind' => $definition['kind'],
+            'displayValue' => $displayValue,
+            'fontFamilyCss' => $definition['kind'] === 'font'
+                ? (self::FONT_FAMILY_CSS[$settingValue] ?? self::FONT_FAMILY_CSS['System'])
+                : null,
+            'fontRoleDescription' => self::FONT_ROLE_DESCRIPTIONS[$type] ?? null,
+            'fontSizeCss' => $definition['kind'] === 'font_size'
+                && preg_match('/\A\d+(?:\.\d+)?(?:px|rem|em|%)\z/', $settingValue) === 1
+                ? $settingValue
+                : null,
+            'fontSizeDescription' => self::FONT_SIZE_DESCRIPTIONS[$type] ?? null,
+            'palette' => $paletteData,
+            'isValidPalette' => $definition['kind'] === 'palette' && $isValidPalette,
+            'isActive' => $definition['kind'] === 'palette'
+                && substr($type, -1) === $activePalette,
+            'previewColor' => $definition['kind'] === 'color'
+                ? $setting?->value
+                : ($definition['kind'] === 'palette' && is_array($paletteData)
+                    ? ($paletteData['primary'] ?? null)
+                    : null),
+            'imageUrl' => $imageUrl,
+            'exists' => $setting !== null,
+            'isEnabled' => $definition['kind'] === 'boolean' && $settingValue === '1',
+            'hint' => self::COMMERCE_HINTS[$type] ?? null,
+        ];
+    }
+
+    /**
+     * @param  array<string, array<int, array<string, mixed>>>  $settingGroups
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildTabs(array $settingGroups): array
+    {
         $tabs = [];
 
         foreach (self::TABS as $tabId => $tab) {
@@ -480,15 +539,7 @@ class Settings extends Component
             ];
         }
 
-        if (! array_key_exists($this->activeTab, $tabs)) {
-            $this->activeTab = 'general';
-        }
-
-        return view('livewire.admin.settings', [
-            'tabs' => $tabs,
-            'activeSettings' => $tabs[$this->activeTab]['settings'],
-            'maintenanceMode' => $maintenanceMode,
-        ])->layout('components.layouts.admin', ['title' => 'Settings']);
+        return $tabs;
     }
 
     /**
@@ -522,6 +573,12 @@ class Settings extends Component
             'lipa_business_name' => ['group' => 'Vodacom Lipa', 'label' => 'Business name shown to the payer', 'kind' => 'text'],
             'lipa_instructions' => ['group' => 'Vodacom Lipa', 'label' => 'Payment instructions', 'kind' => 'textarea'],
             'lipa_webhook_secret' => ['group' => 'Vodacom Lipa', 'label' => 'Callback signing secret', 'kind' => 'secret'],
+            'selcom_enabled' => ['group' => 'Payment methods', 'label' => 'Selcom Pay', 'kind' => 'boolean'],
+            'selcom_mode' => ['group' => 'Selcom Gateway', 'label' => 'Environment mode', 'kind' => 'selcom_mode'],
+            'selcom_vendor_id' => ['group' => 'Selcom Gateway', 'label' => 'Vendor ID / Till', 'kind' => 'text'],
+            'selcom_api_key' => ['group' => 'Selcom Gateway', 'label' => 'API Key', 'kind' => 'secret'],
+            'selcom_api_secret' => ['group' => 'Selcom Gateway', 'label' => 'API Secret', 'kind' => 'secret'],
+            'selcom_instructions' => ['group' => 'Selcom Gateway', 'label' => 'Payment instructions', 'kind' => 'textarea'],
             'maintenance_mode' => ['group' => 'Basic settings', 'label' => 'Maintenance mode', 'kind' => 'boolean'],
             'backend_palette_active' => ['group' => 'Backend palettes', 'label' => 'Active backend palette', 'kind' => 'palette_selection'],
             'frontend_palette_active' => ['group' => 'Frontend palettes', 'label' => 'Active frontend palette', 'kind' => 'palette_selection'],
@@ -694,6 +751,7 @@ class Settings extends Component
             'font_size' => ['required', 'regex:/\A\d+(?:\.\d+)?(?:px|rem|em|%)\z/'],
             'language' => ['required', 'regex:/\A[a-zA-Z]{2,5}(?:[-_][a-zA-Z0-9]{2,8})?\z/'],
             'lipa_number' => ['required', 'regex:/\A\d{5,9}\z/'],
+            'selcom_mode' => ['required', Rule::in(['sandbox', 'live', 'simulation'])],
             'palette_selection' => ['required', 'integer', 'between:1,4'],
             'phone' => ['nullable', 'regex:/\A[+\d\s().-]{5,35}\z/'],
             'secret' => ['nullable', 'string', 'max:255'],

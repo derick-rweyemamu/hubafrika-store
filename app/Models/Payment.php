@@ -11,9 +11,12 @@ class Payment extends Model
 
     public const METHOD_VODACOM_LIPA = 'vodacom_lipa';
 
+    public const METHOD_SELCOM = 'selcom';
+
     public const METHOD_LABELS = [
         self::METHOD_CASH_ON_DELIVERY => 'Cash on delivery',
         self::METHOD_VODACOM_LIPA => 'Vodacom Lipa (M-Pesa)',
+        self::METHOD_SELCOM => 'Selcom Pay (Mobile Money / Cards)',
     ];
 
     public const STATUS_PENDING = 'pending';
@@ -69,6 +72,12 @@ class Payment extends Model
                 'lipa_instructions',
                 'lipa_requires_verification',
                 'lipa_webhook_secret',
+                'selcom_enabled',
+                'selcom_mode',
+                'selcom_vendor_id',
+                'selcom_api_key',
+                'selcom_api_secret',
+                'selcom_instructions',
             ])
             ->pluck('value', 'type');
 
@@ -80,6 +89,12 @@ class Payment extends Model
             'lipa_instructions' => (string) ($stored->get('lipa_instructions') ?? ''),
             'lipa_requires_verification' => (string) ($stored->get('lipa_requires_verification') ?? '1'),
             'lipa_webhook_secret' => (string) ($stored->get('lipa_webhook_secret') ?? ''),
+            'selcom_enabled' => (string) ($stored->get('selcom_enabled') ?? '0'),
+            'selcom_mode' => (string) ($stored->get('selcom_mode') ?? 'sandbox'),
+            'selcom_vendor_id' => (string) ($stored->get('selcom_vendor_id') ?? ''),
+            'selcom_api_key' => (string) ($stored->get('selcom_api_key') ?? ''),
+            'selcom_api_secret' => (string) ($stored->get('selcom_api_secret') ?? ''),
+            'selcom_instructions' => (string) ($stored->get('selcom_instructions') ?? ''),
         ];
     }
 
@@ -104,7 +119,29 @@ class Payment extends Model
             $methods[self::METHOD_VODACOM_LIPA] = self::METHOD_LABELS[self::METHOD_VODACOM_LIPA];
         }
 
+        if ($settings['selcom_enabled'] === '1') {
+            $methods[self::METHOD_SELCOM] = self::METHOD_LABELS[self::METHOD_SELCOM];
+        }
+
         return $methods;
+    }
+
+    /**
+     * The merchant account and gateway configuration for Selcom.
+     *
+     * @return array{enabled: bool, mode: string, vendor_id: string, instructions: string, is_configured: bool}
+     */
+    public static function selcomAccount(): array
+    {
+        $settings = self::settings();
+
+        return [
+            'enabled' => $settings['selcom_enabled'] === '1',
+            'mode' => $settings['selcom_mode'],
+            'vendor_id' => $settings['selcom_vendor_id'],
+            'instructions' => $settings['selcom_instructions'],
+            'is_configured' => filled($settings['selcom_api_key']) && filled($settings['selcom_api_secret']) && filled($settings['selcom_vendor_id']),
+        ];
     }
 
     /**

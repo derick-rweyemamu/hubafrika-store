@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\State;
 use App\Models\User;
+use App\Services\Selcom\SelcomClient;
 use App\Support\Storefront\CartSession;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Collection;
@@ -60,6 +61,16 @@ class Checkout extends Component
 
     public string $paymentReference = '';
 
+    public string $selcomNetwork = 'VODACOM';
+
+    public string $selcomPhone = '';
+
+    public ?string $selcomLookupName = null;
+
+    public ?string $selcomLookupError = null;
+
+    public bool $isLookingUpName = false;
+
     public function mount(): void
     {
         $customer = auth()->user();
@@ -71,6 +82,7 @@ class Checkout extends Component
         $this->shippingPhone = $defaultAddress?->phone ?? $customer?->phone ?? '';
         $this->paymentMethod = (string) (array_key_first(Payment::availableMethods()) ?? '');
         $this->paymentPayerPhone = $customer?->phone ?? '';
+        $this->selcomPhone = $customer?->phone ?? $this->shippingPhone;
 
         // Prefill country/state/city from the default address FKs first,
         // then fall back to matching the user's plain-text fields.
@@ -184,6 +196,40 @@ class Checkout extends Component
             ->get(['id', 'name']);
     }
 
+    /**
+     * Perform live Selcom wallet name lookup.
+     */
+    public function lookupSelcomAccount(): void
+    {
+        $phone = trim($this->selcomPhone !== '' ? $this->selcomPhone : $this->shippingPhone);
+
+        if ($phone === '') {
+            $this->addError('selcomPhone', 'Enter a phone number to verify.');
+
+            return;
+        }
+
+        $this->isLookingUpName = true;
+        $this->selcomLookupName = null;
+        $this->selcomLookupError = null;
+
+        try {
+            /** @var SelcomClient $client */
+            $client = app(SelcomClient::class);
+            $result = $client->nameLookup($phone, $this->selcomNetwork);
+
+            if (($result['result'] ?? '') === 'SUCCESS' && filled($result['name'] ?? null)) {
+                $this->selcomLookupName = $result['name'];
+            } else {
+                $this->selcomLookupError = $result['message'] ?? 'Could not verify account name.';
+            }
+        } catch (\Throwable $e) {
+            $this->selcomLookupError = 'Verification failed: '.$e->getMessage();
+        } finally {
+            $this->isLookingUpName = false;
+        }
+    }
+
     public function placeOrder(): void
     {
         $customer = auth()->user();
@@ -228,8 +274,59 @@ class Checkout extends Component
             'paymentReference' => ['nullable', 'string', 'max:100'],
         ]);
 
-        // Resolve IDs to names for storage on the order.
-        // Use the text fallback when the select has no options (no states/cities in DB).
+        $location = $this->resolveShippingLocation($validated);
+        $paymentMethod = $validated['paymentMethod'];
+        $payerPhone = $this->validatePaymentDetails($paymentMethod, $validated);
+
+        // Everything validated: create the account now so the guest cart can be
+        // handed over before the order is written.
+        if (! $customer instanceof User) {
+            $customer = $this->createCustomer($account);
+        }
+
+        // Persist the delivery fields back to the customer record for next time.
+        $customer->forceFill([
+            'country' => $location['country'],
+            'state' => $location['state'],
+            'city' => $location['city'],
+            'address' => $validated['shippingAddress'],
+            'postal_code' => $validated['shippingPostalCode'] ?: null,
+            'phone' => $validated['shippingPhone'] ?: $customer->phone,
+        ])->save();
+
+        $order = $this->persistOrderInTransaction($customer, $validated, $location, $payerPhone);
+
+        if ($paymentMethod === Payment::METHOD_SELCOM) {
+            $this->initiateSelcomCheckout($order, $customer, $payerPhone);
+
+            return;
+        }
+
+        $isLipa = $paymentMethod === Payment::METHOD_VODACOM_LIPA;
+        $lipaAccount = Payment::lipaAccount();
+
+        session()->flash('message', $isLipa
+            ? sprintf(
+                'Order %s received. Pay %s to Lipa number %s, then wait for our confirmation.',
+                $order->order_number,
+                $order->money($order->total),
+                $lipaAccount['number'],
+            )
+            : "Order {$order->order_number} was placed successfully. Pay cash when it is delivered.");
+
+        $order->notifyCustomer(new OrderPlacedMail($order));
+
+        $this->redirectRoute('orders.show', ['order' => $order]);
+    }
+
+    /**
+     * Resolve IDs to names for storage on the order, using text fallbacks when needed.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{country: ?string, state: ?string, city: ?string}
+     */
+    private function resolveShippingLocation(array $validated): array
+    {
         $countryName = $validated['shippingCountryId'] !== '' && $validated['shippingCountryId'] !== null
             ? Country::query()->where('id', (int) $validated['shippingCountryId'])->value('name')
             : null;
@@ -242,13 +339,22 @@ class Checkout extends Component
             ? City::query()->where('id', (int) $validated['shippingCityId'])->value('name')
             : (filled($validated['shippingCityText']) ? $validated['shippingCityText'] : null);
 
-        $paymentMethod = $validated['paymentMethod'];
-        $isLipa = $paymentMethod === Payment::METHOD_VODACOM_LIPA;
-        $lipaAccount = Payment::lipaAccount();
-        $payerPhone = null;
+        return [
+            'country' => $countryName,
+            'state' => $stateName,
+            'city' => $cityName,
+        ];
+    }
 
-        if ($isLipa) {
-            $payerPhone = (string) preg_replace('/\D+/', '', $validated['paymentPayerPhone']);
+    /**
+     * Validate gateway-specific payment details and return the normalized payer phone.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function validatePaymentDetails(string $paymentMethod, array $validated): ?string
+    {
+        if ($paymentMethod === Payment::METHOD_VODACOM_LIPA) {
+            $payerPhone = (string) preg_replace('/\D+/', '', (string) ($validated['paymentPayerPhone'] ?? ''));
 
             if (preg_match('/\A(?:0\d{9}|255\d{9})\z/', $payerPhone) !== 1) {
                 throw ValidationException::withMessages([
@@ -261,25 +367,42 @@ class Checkout extends Component
             ], [
                 'paymentReference.unique' => 'That transaction ID has already been submitted for another order.',
             ]);
+
+            return $payerPhone;
         }
 
-        // Everything validated: create the account now so the guest cart can be
-        // handed over before the order is written.
-        if (! $customer instanceof User) {
-            $customer = $this->createCustomer($account);
+        if ($paymentMethod === Payment::METHOD_SELCOM) {
+            $rawSelcomPhone = trim($this->selcomPhone !== '' ? $this->selcomPhone : (string) ($validated['shippingPhone'] ?? ''));
+            $payerPhone = (string) preg_replace('/\D+/', '', $rawSelcomPhone);
+
+            if (preg_match('/\A(?:0\d{9}|255\d{9})\z/', $payerPhone) !== 1) {
+                throw ValidationException::withMessages([
+                    'selcomPhone' => 'Enter a valid mobile money number for payment (e.g. 0754000000 or 255754000000).',
+                ]);
+            }
+
+            return $payerPhone;
         }
 
-        // Persist the delivery fields back to the customer record for next time.
-        $customer->forceFill([
-            'country' => $countryName,
-            'state' => $stateName,
-            'city' => $cityName,
-            'address' => $validated['shippingAddress'],
-            'postal_code' => $validated['shippingPostalCode'] ?: null,
-            'phone' => $validated['shippingPhone'] ?: $customer->phone,
-        ])->save();
+        return null;
+    }
 
-        $order = DB::transaction(function () use ($customer, $validated, $countryName, $stateName, $cityName, $paymentMethod, $isLipa, $payerPhone, $lipaAccount): Order {
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array{country: ?string, state: ?string, city: ?string}  $location
+     */
+    private function persistOrderInTransaction(
+        User $customer,
+        array $validated,
+        array $location,
+        ?string $payerPhone,
+    ): Order {
+        $paymentMethod = $validated['paymentMethod'];
+        $isLipa = $paymentMethod === Payment::METHOD_VODACOM_LIPA;
+        $isSelcom = $paymentMethod === Payment::METHOD_SELCOM;
+        $lipaAccount = Payment::lipaAccount();
+
+        return DB::transaction(function () use ($customer, $validated, $location, $paymentMethod, $isLipa, $isSelcom, $payerPhone, $lipaAccount): Order {
             $cartItems = CartSession::query($customer)
                 ->with('product')
                 ->lockForUpdate()
@@ -291,7 +414,7 @@ class Checkout extends Component
                 ]);
             }
 
-            if ($customer->email === null || $customer->name === '') {
+            if (blank($customer->email) || blank($customer->name)) {
                 throw ValidationException::withMessages([
                     'checkout' => 'Add your name and email to your profile before placing an order.',
                 ]);
@@ -305,60 +428,20 @@ class Checkout extends Component
                 ]);
             }
 
-            $preparedItems = [];
-            $subtotal = 0.0;
-            $discountTotal = 0.0;
-            $taxTotal = 0.0;
-
-            foreach ($cartItems as $cartItem) {
-                $product = Product::query()->whereKey($cartItem->product_id)->lockForUpdate()->first();
-
-                if ($product === null || ! $product->published || ! $product->approved) {
-                    throw ValidationException::withMessages([
-                        'checkout' => 'A product in your cart is no longer available.',
-                    ]);
-                }
-
-                [$productStock, $variation] = $this->selectedStock($cartItem, $product);
-                $availableStock = $productStock?->qty ?? $product->current_stock;
-
-                if ($availableStock < $cartItem->quantity) {
-                    throw ValidationException::withMessages([
-                        'checkout' => "There is not enough stock for {$product->name}.",
-                    ]);
-                }
-
-                if ($cartItem->quantity < max(1, (int) $product->min_qty)) {
-                    throw ValidationException::withMessages([
-                        'checkout' => "{$product->name} requires a minimum quantity of {$product->min_qty}.",
-                    ]);
-                }
-
-                $pricing = $this->linePricing($product, $productStock, (int) $cartItem->quantity);
-
-                $preparedItems[] = [
-                    'product' => $product,
-                    'productStock' => $productStock,
-                    'variation' => $variation,
-                    'quantity' => (int) $cartItem->quantity,
-                    ...$pricing,
-                ];
-                $subtotal += $pricing['subtotal'];
-                $discountTotal += $pricing['discountAmount'];
-                $taxTotal += $pricing['taxAmount'];
-            }
-
+            $prepared = $this->prepareOrderItems($cartItems);
             $freeShipping = BusinessSetting::query()->where('type', 'free_shipping')->value('value') === '1';
             $shippingTotal = $freeShipping
-                ? 0
-                : max(0, (float) (BusinessSetting::query()
+                ? 0.0
+                : max(0.0, (float) (BusinessSetting::query()
                     ->where('type', 'flat_rate_shipping_cost')
                     ->value('value') ?? 0));
-            $subtotal = round($subtotal, 2);
-            $discountTotal = round($discountTotal, 2);
-            $taxTotal = round($taxTotal, 2);
+
+            $subtotal = round($prepared['subtotal'], 2);
+            $discountTotal = round($prepared['discountTotal'], 2);
+            $taxTotal = round($prepared['taxTotal'], 2);
             $shippingTotal = round($shippingTotal, 2);
 
+            /** @var Order $order */
             $order = $customer->orders()->create([
                 'order_number' => 'ORD-'.Str::upper((string) Str::ulid()),
                 'customer_name' => $customer->name,
@@ -375,13 +458,13 @@ class Checkout extends Component
                 'shipping_total' => $shippingTotal,
                 'total' => round($subtotal - $discountTotal + $taxTotal + $shippingTotal, 2),
                 'shipping_address' => $validated['shippingAddress'],
-                'shipping_country' => $countryName,
-                'shipping_state' => $stateName,
-                'shipping_city' => $cityName,
+                'shipping_country' => $location['country'],
+                'shipping_state' => $location['state'],
+                'shipping_city' => $location['city'],
                 'shipping_postal_code' => $validated['shippingPostalCode'] ?: null,
             ]);
 
-            foreach ($preparedItems as $preparedItem) {
+            foreach ($prepared['items'] as $preparedItem) {
                 $product = $preparedItem['product'];
                 $productStock = $preparedItem['productStock'];
 
@@ -409,23 +492,110 @@ class Checkout extends Component
                 'reference' => $isLipa ? $validated['paymentReference'] : null,
                 'payer_phone' => $payerPhone,
                 'status' => $isLipa ? Payment::STATUS_AWAITING_VERIFICATION : Payment::STATUS_PENDING,
-                'submitted_at' => $isLipa ? now() : null,
+                'submitted_at' => ($isLipa || $isSelcom) ? now() : null,
             ]);
 
             return $order;
         });
+    }
 
-        session()->flash('message', $isLipa
-            ? sprintf(
-                'Order %s received. Pay %s to Lipa number %s, then wait for our confirmation.',
-                $order->order_number,
-                $order->money($order->total),
-                $lipaAccount['number'],
-            )
-            : "Order {$order->order_number} was placed successfully. Pay cash when it is delivered.");
+    /**
+     * @param  Collection<int, CartItem>  $cartItems
+     * @return array{items: array<int, array<string, mixed>>, subtotal: float, discountTotal: float, taxTotal: float}
+     */
+    private function prepareOrderItems(Collection $cartItems): array
+    {
+        $preparedItems = [];
+        $subtotal = 0.0;
+        $discountTotal = 0.0;
+        $taxTotal = 0.0;
 
+        foreach ($cartItems as $cartItem) {
+            $product = Product::query()->whereKey($cartItem->product_id)->lockForUpdate()->first();
+
+            if ($product === null || ! $product->published || ! $product->approved) {
+                throw ValidationException::withMessages([
+                    'checkout' => 'A product in your cart is no longer available.',
+                ]);
+            }
+
+            [$productStock, $variation] = $this->selectedStock($cartItem, $product);
+            $availableStock = $productStock?->qty ?? $product->current_stock;
+
+            if ($availableStock < $cartItem->quantity) {
+                throw ValidationException::withMessages([
+                    'checkout' => "There is not enough stock for {$product->name}.",
+                ]);
+            }
+
+            if ($cartItem->quantity < max(1, (int) $product->min_qty)) {
+                throw ValidationException::withMessages([
+                    'checkout' => "{$product->name} requires a minimum quantity of {$product->min_qty}.",
+                ]);
+            }
+
+            $pricing = $this->linePricing($product, $productStock, (int) $cartItem->quantity);
+
+            $preparedItems[] = [
+                'product' => $product,
+                'productStock' => $productStock,
+                'variation' => $variation,
+                'quantity' => (int) $cartItem->quantity,
+                ...$pricing,
+            ];
+            $subtotal += $pricing['subtotal'];
+            $discountTotal += $pricing['discountAmount'];
+            $taxTotal += $pricing['taxAmount'];
+        }
+
+        return [
+            'items' => $preparedItems,
+            'subtotal' => $subtotal,
+            'discountTotal' => $discountTotal,
+            'taxTotal' => $taxTotal,
+        ];
+    }
+
+    private function initiateSelcomCheckout(Order $order, User $customer, ?string $payerPhone): void
+    {
+        /** @var SelcomClient $selcomClient */
+        $selcomClient = app(SelcomClient::class);
+        $selcomResponse = $selcomClient->createOrderMinimal([
+            'order_id' => $order->order_number,
+            'buyer_email' => (string) $customer->email,
+            'buyer_name' => (string) $customer->name,
+            'buyer_phone' => (string) $payerPhone,
+            'amount' => $order->total,
+            'currency' => $order->currency,
+            'no_of_items' => $order->items()->count(),
+            'redirect_url' => route('orders.show', ['order' => $order]),
+            'cancel_url' => route('checkout'),
+            'webhook' => route('payments.selcom.callback'),
+        ]);
+
+        if (($selcomResponse['result'] ?? '') === 'SUCCESS') {
+            $ref = $selcomResponse['reference'] ?? ('SELCOM-'.$order->order_number);
+            /** @var Payment|null $payment */
+            $payment = $order->payments()->latest('id')->first();
+            $payment?->forceFill([
+                'reference' => $ref,
+                'payload' => $selcomResponse,
+            ])->save();
+
+            $order->forceFill(['payment_reference' => $ref])->save();
+
+            $order->notifyCustomer(new OrderPlacedMail($order));
+
+            if (! empty($selcomResponse['payment_gateway_url'])) {
+                session()->flash('message', "Order {$order->order_number} initiated. Redirecting to complete payment...");
+                $this->redirect($selcomResponse['payment_gateway_url']);
+
+                return;
+            }
+        }
+
+        session()->flash('message', "Order {$order->order_number} placed. Complete payment via your Selcom prompt.");
         $order->notifyCustomer(new OrderPlacedMail($order));
-
         $this->redirectRoute('orders.show', ['order' => $order]);
     }
 
@@ -458,6 +628,52 @@ class Checkout extends Component
     public function render()
     {
         $cartItems = CartSession::query()->with('product')->get();
+        $variantStocks = $this->loadVariantStocks($cartItems);
+        $preview = $this->buildCartPreview($cartItems, $variantStocks);
+
+        $settings = BusinessSetting::query()
+            ->whereIn('type', ['currency_code', 'free_shipping', 'flat_rate_shipping_cost'])
+            ->pluck('value', 'type');
+        $shippingTotal = $settings->get('free_shipping') === '1'
+            ? 0.0
+            : max(0.0, (float) ($settings->get('flat_rate_shipping_cost') ?? 0));
+
+        $subtotal = round($preview['subtotal'], 2);
+        $discountTotal = round($preview['discountTotal'], 2);
+        $taxTotal = round($preview['taxTotal'], 2);
+        $shippingTotal = round($shippingTotal, 2);
+
+        return view('livewire.storefront.checkout', [
+            'cartItems' => $cartItems,
+            'previewItems' => $preview['previewItems'],
+            'currency' => $settings->get('currency_code') ?? 'TZS',
+            'subtotal' => $subtotal,
+            'discountTotal' => $discountTotal,
+            'taxTotal' => $taxTotal,
+            'shippingTotal' => $shippingTotal,
+            'total' => round($subtotal - $discountTotal + $taxTotal + $shippingTotal, 2),
+            'paymentOptions' => Payment::availableMethods(),
+            'lipaAccount' => Payment::lipaAccount(),
+            'selcomAccount' => Payment::selcomAccount(),
+        ])->layout('components.layouts.storefront', [
+            'title' => 'Checkout',
+            'navigationArea' => 'store',
+            'pageHeader' => [
+                'title' => 'Checkout',
+                'parents' => [
+                    ['label' => 'Shop', 'url' => route('shop')],
+                    ['label' => 'Your cart', 'url' => route('cart')],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, CartItem>  $cartItems
+     * @return Collection<int, ProductStock>
+     */
+    private function loadVariantStocks(Collection $cartItems): Collection
+    {
         $selectedStockIds = $cartItems
             ->filter(fn (CartItem $cartItem): bool => $cartItem->product?->variant_product ?? false)
             ->map(function (CartItem $cartItem): int|false {
@@ -470,9 +686,19 @@ class Checkout extends Component
             ->filter(fn (int|false $id): bool => is_int($id) && $id > 0)
             ->unique()
             ->values();
-        $variantStocks = $selectedStockIds->isNotEmpty()
+
+        return $selectedStockIds->isNotEmpty()
             ? ProductStock::query()->whereIn('id', $selectedStockIds)->get()->keyBy('id')
             : collect();
+    }
+
+    /**
+     * @param  Collection<int, CartItem>  $cartItems
+     * @param  Collection<int, ProductStock>  $variantStocks
+     * @return array{previewItems: array<int, array<string, mixed>>, subtotal: float, discountTotal: float, taxTotal: float}
+     */
+    private function buildCartPreview(Collection $cartItems, Collection $variantStocks): array
+    {
         $previewItems = [];
         $subtotal = 0.0;
         $discountTotal = 0.0;
@@ -509,39 +735,12 @@ class Checkout extends Component
             $taxTotal += $pricing['taxAmount'];
         }
 
-        $settings = BusinessSetting::query()
-            ->whereIn('type', ['currency_code', 'free_shipping', 'flat_rate_shipping_cost'])
-            ->pluck('value', 'type');
-        $shippingTotal = $settings->get('free_shipping') === '1'
-            ? 0
-            : max(0, (float) ($settings->get('flat_rate_shipping_cost') ?? 0));
-        $subtotal = round($subtotal, 2);
-        $discountTotal = round($discountTotal, 2);
-        $taxTotal = round($taxTotal, 2);
-        $shippingTotal = round($shippingTotal, 2);
-
-        return view('livewire.storefront.checkout', [
-            'cartItems' => $cartItems,
+        return [
             'previewItems' => $previewItems,
-            'currency' => $settings->get('currency_code') ?? 'TZS',
             'subtotal' => $subtotal,
             'discountTotal' => $discountTotal,
             'taxTotal' => $taxTotal,
-            'shippingTotal' => $shippingTotal,
-            'total' => round($subtotal - $discountTotal + $taxTotal + $shippingTotal, 2),
-            'paymentOptions' => Payment::availableMethods(),
-            'lipaAccount' => Payment::lipaAccount(),
-        ])->layout('components.layouts.storefront', [
-            'title' => 'Checkout',
-            'navigationArea' => 'store',
-            'pageHeader' => [
-                'title' => 'Checkout',
-                'parents' => [
-                    ['label' => 'Shop', 'url' => route('shop')],
-                    ['label' => 'Your cart', 'url' => route('cart')],
-                ],
-            ],
-        ]);
+        ];
     }
 
     /**
@@ -582,9 +781,10 @@ class Checkout extends Component
         }
 
         $selection = json_decode((string) $cartItem->variation, true);
-        $stockId = is_array($selection) ? filter_var($selection['product_stock_id'] ?? null, FILTER_VALIDATE_INT) : false;
+        $rawStockId = is_array($selection) ? ($selection['product_stock_id'] ?? null) : null;
+        $stockId = filter_var($rawStockId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-        if (! is_int($stockId) || $stockId < 1) {
+        if ($stockId === false) {
             throw ValidationException::withMessages([
                 'checkout' => "Choose a valid option for {$product->name} before checking out.",
             ]);

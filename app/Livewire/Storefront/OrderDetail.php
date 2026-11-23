@@ -53,9 +53,10 @@ class OrderDetail extends Component
             $order->payment_reference = $reference;
             $order->save();
 
+            /** @var Payment|null $payment */
             $payment = $order->payments()->latest('id')->first();
 
-            if ($payment === null) {
+            if (! $payment instanceof Payment) {
                 $order->payments()->create([
                     'method' => Payment::METHOD_VODACOM_LIPA,
                     'amount' => $order->total,
@@ -147,9 +148,11 @@ class OrderDetail extends Component
                     'awaiting_verification' => 'Waiting for us to verify your transaction ID',
                     'failed' => 'Could not be verified',
                     'refunded' => 'Refunded',
-                    default => $order->payment_method === Payment::METHOD_CASH_ON_DELIVERY
-                        ? 'Pay cash on delivery'
-                        : 'Not paid yet',
+                    default => match ($order->payment_method) {
+                        Payment::METHOD_CASH_ON_DELIVERY => 'Pay cash on delivery',
+                        Payment::METHOD_SELCOM => 'Awaiting Selcom confirmation',
+                        default => 'Not paid yet',
+                    },
                 },
                 'state' => $paymentState,
             ],
