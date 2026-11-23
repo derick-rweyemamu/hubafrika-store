@@ -5,6 +5,7 @@ namespace App\Http\Requests\Auth;
 use App\Models\User;
 use App\Rules\RecaptchaV3;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -48,7 +49,9 @@ class LoginRequest extends FormRequest
         $credentials = $this->only('email', 'password');
         $credentials['banned'] = false;
 
-        $provider = Auth::guard('web')->getProvider();
+        /** @var SessionGuard $guard */
+        $guard = Auth::guard('web');
+        $provider = $guard->getProvider();
         $user = $provider->retrieveByCredentials($credentials);
 
         if (! $user instanceof User || ! $provider->validateCredentials($user, $credentials)) {
