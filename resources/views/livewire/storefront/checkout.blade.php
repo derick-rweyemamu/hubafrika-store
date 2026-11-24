@@ -216,7 +216,7 @@
                                 class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">M-Pesa number used
                                 *</label>
                             <input id="payment-phone" type="tel" wire:model="paymentPayerPhone" autocomplete="tel"
-                                placeholder="0754000000"
+                                placeholder="0755000000"
                                 class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                             @error('paymentPayerPhone')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
