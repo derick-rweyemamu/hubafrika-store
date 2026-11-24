@@ -8,7 +8,6 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Selcom\SelcomClient;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -32,36 +31,32 @@ class SelcomCallbackController extends Controller
     {
         $settings = Payment::settings();
 
-        if ($settings['selcom_enabled'] !== '1') {
+        if ($settings['selcom_enabled'] !== '1' || ! $client->isConfigured()) {
             return response()->json([
                 'result' => 'FAIL',
                 'resultcode' => '503',
-                'message' => 'Selcom payment gateway is disabled on this store.',
+                'message' => 'Selcom payment gateway is disabled or not configured.',
             ], 503);
         }
 
         $receivedDigest = (string) $request->header('Digest', '');
         $timestamp = (string) $request->header('Timestamp', '');
         $signedFields = (string) $request->header('Signed-Fields', '');
-
         $payload = $request->all();
 
-        // When in live/sandbox mode, verify HMAC SHA-256 signature
-        if (! $client->isSimulationMode()) {
-            if ($receivedDigest === '' || ! $client->verifyWebhookSignature($payload, $receivedDigest, $timestamp, $signedFields)) {
-                Log::warning('Selcom callback invalid signature', [
-                    'digest' => $receivedDigest,
-                    'timestamp' => $timestamp,
-                    'signed_fields' => $signedFields,
-                    'payload' => $payload,
-                ]);
+        if (! $client->verifyWebhookSignature($payload, $receivedDigest, $timestamp, $signedFields)) {
+            Log::warning('Selcom callback invalid signature', [
+                'digest' => $receivedDigest,
+                'timestamp' => $timestamp,
+                'signed_fields' => $signedFields,
+                'payload' => $payload,
+            ]);
 
-                return response()->json([
-                    'result' => 'FAIL',
-                    'resultcode' => '403',
-                    'message' => 'Invalid signature digest',
-                ], 403);
-            }
+            return response()->json([
+                'result' => 'FAIL',
+                'resultcode' => '403',
+                'message' => 'Invalid signature digest',
+            ], 403);
         }
 
         $orderId = (string) ($payload['order_id'] ?? $payload['reference'] ?? '');
@@ -178,49 +173,5 @@ class SelcomCallbackController extends Controller
             'resultcode' => '000',
             'message' => 'Payment status pending/acknowledged',
         ]);
-    }
-
-    /**
-     * Simulate an incoming successful webhook for testing purposes.
-     * Active only when mode is simulation/sandbox or in local environment.
-     */
-    public function simulate(Order $order): RedirectResponse
-    {
-        $settings = Payment::settings();
-
-        if (app()->isProduction() && $settings['selcom_mode'] === 'live') {
-            abort(403, 'Payment simulation is disabled in live production mode.');
-        }
-
-        $payment = $order->payments()->latest('id')->first();
-        $mockTransId = 'SIM-TRANS-'.now()->format('YmdHis').'-'.rand(1000, 9999);
-
-        DB::transaction(function () use ($order, $payment, $mockTransId): void {
-            if ($payment !== null) {
-                $payment->forceFill([
-                    'status' => Payment::STATUS_VERIFIED,
-                    'reference' => $mockTransId,
-                    'payload' => [
-                        'simulated' => true,
-                        'order_id' => $order->order_number,
-                        'transid' => $mockTransId,
-                        'payment_status' => 'COMPLETED',
-                        'amount' => (string) $order->total,
-                    ],
-                    'verified_at' => now(),
-                ])->save();
-            }
-
-            $order->forceFill([
-                'payment_status' => 'paid',
-                'payment_reference' => $mockTransId,
-            ])->save();
-        });
-
-        $order->notifyCustomer(new PaymentVerifiedMail($order));
-
-        session()->flash('message', 'Simulated Selcom payment completed successfully! Order is now marked as Paid.');
-
-        return redirect()->route('orders.show', ['order' => $order]);
     }
 }

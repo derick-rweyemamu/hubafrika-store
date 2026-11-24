@@ -8,154 +8,115 @@ use App\Models\BusinessSetting;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Selcom\SelcomClient;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 
 class SelcomPaymentTest extends OrdersTestCase
 {
     protected function enableSelcom(
-        string $mode = 'simulation',
         string $apiKey = 'test-key',
         string $apiSecret = 'test-secret',
-        string $vendorId = 'VND123'
+        string $vendorId = 'VND123',
+        string $paymentMethods = 'MOBILEMONEY',
     ): void {
         foreach ([
             'selcom_enabled' => '1',
-            'selcom_mode' => $mode,
+            'selcom_payment_methods' => $paymentMethods,
             'selcom_api_key' => $apiKey,
             'selcom_api_secret' => $apiSecret,
             'selcom_vendor_id' => $vendorId,
-            'selcom_instructions' => 'Pay via Selcom mobile money or card.',
+            'selcom_instructions' => 'Pay via Selcom mobile money.',
         ] as $type => $value) {
             BusinessSetting::query()->updateOrCreate(['type' => $type], ['value' => $value, 'lang' => null]);
         }
     }
 
-    public function test_selcom_is_available_when_enabled(): void
+    public function test_selcom_is_hidden_until_credentials_are_configured_and_available_when_configured(): void
+    {
+        $this->enableSelcom(apiKey: '', apiSecret: '', vendorId: '');
+        $this->assertArrayNotHasKey(Payment::METHOD_SELCOM, Payment::availableMethods());
+
+        $this->enableSelcom();
+        $this->assertArrayHasKey(Payment::METHOD_SELCOM, Payment::availableMethods());
+    }
+
+    public function test_selcom_name_lookup_calls_production_gateway(): void
     {
         $this->enableSelcom();
 
-        $methods = Payment::availableMethods();
-        $this->assertArrayHasKey(Payment::METHOD_SELCOM, $methods);
-    }
+        Http::fake([
+            SelcomClient::PRODUCTION_URL.'/v1/walletcashin/namelookup*' => Http::response([
+                'result' => 'SUCCESS',
+                'data' => [['name' => 'AMINA BAKARI']],
+            ]),
+        ]);
 
-    public function test_selcom_name_lookup_in_simulation_mode(): void
-    {
-        $this->enableSelcom('simulation');
-
-        $client = new SelcomClient(mode: 'simulation');
+        $client = new SelcomClient;
         $result = $client->nameLookup('0754123456', 'VODACOM');
 
         $this->assertSame('SUCCESS', $result['result']);
-        $this->assertNotEmpty($result['name']);
+        $this->assertSame('AMINA BAKARI', $result['name']);
         $this->assertSame('255754123456', $result['phone']);
     }
 
-    public function test_selcom_checkout_places_order_and_creates_payment(): void
+    public function test_selcom_checkout_places_order_and_redirects_to_gateway(): void
     {
-        $this->enableSelcom('simulation');
+        $this->enableSelcom();
         $customer = $this->customerWithCart();
         $this->actingAs($customer);
+
+        Http::fake([
+            SelcomClient::PRODUCTION_URL.'/v1/checkout/create-order-minimal' => Http::response([
+                'result' => 'SUCCESS',
+                'resultcode' => '000',
+                'message' => 'Order created successfully',
+                'data' => [[
+                    'reference' => 'SELCOM-REF-1001',
+                    'payment_gateway_url' => 'https://checkout.selcommobile.com/?id=1001',
+                ]],
+            ]),
+        ]);
 
         $component = Livewire::test(Checkout::class)
             ->set('shippingAddress', 'Plot 42 Arusha')
             ->set('shippingPhone', '0754123456')
             ->set('paymentMethod', Payment::METHOD_SELCOM)
             ->set('selcomPhone', '0754123456')
-            ->set('selcomNetwork', 'VODACOM')
+            ->set('selcomNetwork', 'YAS')
             ->call('placeOrder')
             ->assertHasNoErrors();
+
+        $component->assertRedirect('https://checkout.selcommobile.com/?id=1001');
 
         $order = Order::query()->firstOrFail();
 
         $this->assertSame(Payment::METHOD_SELCOM, $order->payment_method);
-        $this->assertNotNull($order->payment_reference);
+        $this->assertSame('SELCOM-REF-1001', $order->payment_reference);
 
         $this->assertDatabaseHas('payments', [
             'order_id' => $order->id,
             'method' => Payment::METHOD_SELCOM,
             'payer_phone' => '0754123456',
+            'reference' => 'SELCOM-REF-1001',
         ]);
     }
 
-    public function test_selcom_webhook_callback_verifies_payment(): void
+    public function test_selcom_webhook_verifies_signature_and_marks_order_paid(): void
     {
         Mail::fake();
 
-        $this->enableSelcom('simulation');
-        $customer = $this->customerWithCart();
-        $this->actingAs($customer);
-
-        Livewire::test(Checkout::class)
-            ->set('shippingAddress', 'Plot 42 Arusha')
-            ->set('shippingPhone', '0754123456')
-            ->set('paymentMethod', Payment::METHOD_SELCOM)
-            ->set('selcomPhone', '0754123456')
-            ->call('placeOrder')
-            ->assertHasNoErrors();
-
-        $order = Order::query()->firstOrFail();
-
-        $response = $this->postJson(route('payments.selcom.callback'), [
-            'order_id' => $order->order_number,
-            'transid' => 'SELCOM-TRANS-998877',
-            'payment_status' => 'COMPLETED',
-            'amount' => (string) $order->total,
-            'phone' => '255754123456',
-        ]);
-
-        $response->assertOk()
-            ->assertJson([
-                'result' => 'SUCCESS',
-                'resultcode' => '000',
-            ]);
-
-        $order->refresh();
-        $this->assertSame('paid', $order->payment_status);
-        $this->assertSame('SELCOM-TRANS-998877', $order->payment_reference);
-
-        $payment = $order->payments()->firstOrFail();
-        $this->assertSame(Payment::STATUS_VERIFIED, $payment->status);
-        $this->assertNotNull($payment->verified_at);
-
-        Mail::assertSent(PaymentVerifiedMail::class);
-    }
-
-    public function test_selcom_webhook_callback_handles_failure(): void
-    {
-        $this->enableSelcom('simulation');
-        $customer = $this->customerWithCart();
-        $this->actingAs($customer);
-
-        Livewire::test(Checkout::class)
-            ->set('shippingAddress', 'Plot 42 Arusha')
-            ->set('paymentMethod', Payment::METHOD_SELCOM)
-            ->set('selcomPhone', '0754123456')
-            ->call('placeOrder')
-            ->assertHasNoErrors();
-
-        $order = Order::query()->firstOrFail();
-
-        $response = $this->postJson(route('payments.selcom.callback'), [
-            'order_id' => $order->order_number,
-            'transid' => 'SELCOM-TRANS-000000',
-            'payment_status' => 'FAILED',
-        ]);
-
-        $response->assertOk();
-
-        $order->refresh();
-        $this->assertSame('failed', $order->payment_status);
-
-        $payment = $order->payments()->firstOrFail();
-        $this->assertSame(Payment::STATUS_REJECTED, $payment->status);
-    }
-
-    public function test_selcom_webhook_verifies_signature_in_live_mode(): void
-    {
         $apiKey = 'my-api-key';
         $apiSecret = 'secret123456';
-        $this->enableSelcom(mode: 'live', apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123');
+        $this->enableSelcom(apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123');
+
+        Http::fake([
+            SelcomClient::PRODUCTION_URL.'/v1/checkout/create-order-minimal' => Http::response([
+                'result' => 'SUCCESS',
+                'resultcode' => '000',
+                'data' => [['reference' => 'SELCOM-INIT-1']],
+            ]),
+        ]);
 
         $customer = $this->customerWithCart();
         $this->actingAs($customer);
@@ -169,20 +130,18 @@ class SelcomPaymentTest extends OrdersTestCase
 
         $order = Order::query()->firstOrFail();
 
-        // 1. Invalid signature should be rejected with 403
-        $badResponse = $this->postJson(route('payments.selcom.callback'), [
+        // Invalid signature must be rejected with 403
+        $this->postJson(route('payments.selcom.callback'), [
             'order_id' => $order->order_number,
             'payment_status' => 'COMPLETED',
         ], [
             'Digest' => 'invalid-digest',
             'Timestamp' => now()->toIso8601String(),
             'Signed-Fields' => 'order_id,payment_status',
-        ]);
+        ])->assertStatus(403);
 
-        $badResponse->assertStatus(403);
-
-        // 2. Valid computed signature should be accepted
-        $client = new SelcomClient(apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123', mode: 'live');
+        // Valid computed signature must be accepted
+        $client = new SelcomClient(apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123');
         $payload = [
             'order_id' => $order->order_number,
             'payment_status' => 'COMPLETED',
@@ -191,23 +150,37 @@ class SelcomPaymentTest extends OrdersTestCase
         $timestamp = now()->toIso8601String();
         $headers = $client->computeHeaders($payload, $timestamp);
 
-        $goodResponse = $this->postJson(route('payments.selcom.callback'), $payload, [
+        $this->postJson(route('payments.selcom.callback'), $payload, [
             'Digest' => $headers['Digest'],
             'Timestamp' => $timestamp,
             'Signed-Fields' => $headers['Signed-Fields'],
-        ]);
-
-        $goodResponse->assertOk()->assertJson(['result' => 'SUCCESS']);
+        ])->assertOk()->assertJson(['result' => 'SUCCESS']);
 
         $order->refresh();
         $this->assertSame('paid', $order->payment_status);
+        $this->assertSame('SELCOM-LIVE-SUCCESS', $order->payment_reference);
+
+        $payment = $order->payments()->firstOrFail();
+        $this->assertSame(Payment::STATUS_VERIFIED, $payment->status);
+        $this->assertNotNull($payment->verified_at);
+
+        Mail::assertSent(PaymentVerifiedMail::class);
     }
 
-    public function test_selcom_simulation_endpoint_marks_order_paid(): void
+    public function test_selcom_webhook_handles_failure_with_valid_signature(): void
     {
-        Mail::fake();
+        $apiKey = 'my-api-key';
+        $apiSecret = 'secret123456';
+        $this->enableSelcom(apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123');
 
-        $this->enableSelcom('simulation');
+        Http::fake([
+            SelcomClient::PRODUCTION_URL.'/v1/checkout/create-order-minimal' => Http::response([
+                'result' => 'SUCCESS',
+                'resultcode' => '000',
+                'data' => [['reference' => 'SELCOM-INIT-2']],
+            ]),
+        ]);
+
         $customer = $this->customerWithCart();
         $this->actingAs($customer);
 
@@ -220,15 +193,25 @@ class SelcomPaymentTest extends OrdersTestCase
 
         $order = Order::query()->firstOrFail();
 
-        $response = $this->actingAs($customer)
-            ->post(route('payments.selcom.simulate', ['order' => $order]));
+        $client = new SelcomClient(apiKey: $apiKey, apiSecret: $apiSecret, vendorId: 'VND123');
+        $payload = [
+            'order_id' => $order->order_number,
+            'transid' => 'SELCOM-TRANS-000000',
+            'payment_status' => 'FAILED',
+        ];
+        $timestamp = now()->toIso8601String();
+        $headers = $client->computeHeaders($payload, $timestamp);
 
-        $response->assertRedirect(route('orders.show', ['order' => $order]));
+        $this->postJson(route('payments.selcom.callback'), $payload, [
+            'Digest' => $headers['Digest'],
+            'Timestamp' => $timestamp,
+            'Signed-Fields' => $headers['Signed-Fields'],
+        ])->assertOk();
 
         $order->refresh();
-        $this->assertSame('paid', $order->payment_status);
-        $this->assertStringStartsWith('SIM-TRANS-', $order->payment_reference);
+        $this->assertSame('failed', $order->payment_status);
 
-        Mail::assertSent(PaymentVerifiedMail::class);
+        $payment = $order->payments()->firstOrFail();
+        $this->assertSame(Payment::STATUS_REJECTED, $payment->status);
     }
 }

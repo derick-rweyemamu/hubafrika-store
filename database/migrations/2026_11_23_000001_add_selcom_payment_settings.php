@@ -11,7 +11,7 @@ return new class extends Migration
         'selcom_vendor_id' => 'TEST-VENDOR',
         'selcom_api_key' => '',
         'selcom_api_secret' => '',
-        'selcom_instructions' => 'Pay securely via Selcom using M-Pesa, Tigo Pesa, Airtel Money, Halopesa, or Card.',
+        'selcom_instructions' => 'Pay securely via Selcom using M-Pesa, Mixx by Yas, Airtel Money, HaloPesa, T-Pesa, or Card.',
     ];
 
     public function up(): void

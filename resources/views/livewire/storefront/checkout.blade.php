@@ -1,52 +1,67 @@
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(18rem,0.7fr)]">
     <section class="space-y-5">
-        <p class="text-sm text-gray-600 dark:text-gray-400">Choose how you want to pay. Order prices are in {{ $currency }}.</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400">Choose how you want to pay. Order prices are in
+            {{ $currency }}.</p>
 
         @error('checkout')
-            <div role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">{{ $message }}</div>
+            <div role="alert"
+                class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+                {{ $message }}</div>
         @enderror
 
-        <form
-            x-data="{
+        <form x-data="{
                 async submitCheckout() {
                     const token = window.hubafrikaRecaptchaToken
                         ? await window.hubafrikaRecaptchaToken('checkout')
                         : '';
                     await $wire.placeOrder(token);
                 }
-            }"
-            @submit.prevent="submitCheckout"
-            class="space-y-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900"
-        >
+            }" @submit.prevent="submitCheckout"
+            class="space-y-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
             @guest
-                <section class="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950">
+                <section
+                    class="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-950">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Create your account</h2>
                         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
                             Your cart is saved. Create an account to place the order and follow its delivery, or
-                            <a href="{{ route('login') }}" class="font-semibold text-blue-700 dark:text-blue-300">sign in</a>
+                            <a href="{{ route('login') }}" class="font-semibold text-blue-700 dark:text-blue-300">sign
+                                in</a>
                             - your cart follows you either way.
                         </p>
                     </div>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label for="checkout-name" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Full name *</label>
-                            <input id="checkout-name" type="text" wire:model="name" autocomplete="name" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                            @error('name') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label for="checkout-name"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Full name *</label>
+                            <input id="checkout-name" type="text" wire:model="name" autocomplete="name"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            @error('name')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="checkout-email" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Email *</label>
-                            <input id="checkout-email" type="email" wire:model="email" autocomplete="username" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                            @error('email') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label for="checkout-email"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Email *</label>
+                            <input id="checkout-email" type="email" wire:model="email" autocomplete="username"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            @error('email')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="checkout-password" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Password *</label>
-                            <input id="checkout-password" type="password" wire:model="password" autocomplete="new-password" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                            @error('password') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label for="checkout-password"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Password *</label>
+                            <input id="checkout-password" type="password" wire:model="password" autocomplete="new-password"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            @error('password')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="checkout-password-confirmation" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Confirm password *</label>
-                            <input id="checkout-password-confirmation" type="password" wire:model="password_confirmation" autocomplete="new-password" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            <label for="checkout-password-confirmation"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Confirm password
+                                *</label>
+                            <input id="checkout-password-confirmation" type="password" wire:model="password_confirmation"
+                                autocomplete="new-password"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                         </div>
                     </div>
                 </section>
@@ -54,133 +69,188 @@
 
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Delivery details</h2>
             <div>
-                <label for="checkout-address" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Street address *</label>
-                <textarea id="checkout-address" wire:model="shippingAddress" rows="3" autocomplete="street-address" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950"></textarea>
-                @error('shippingAddress') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                <label for="checkout-address"
+                    class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Street address *</label>
+                <textarea id="checkout-address" wire:model="shippingAddress" rows="3" autocomplete="street-address"
+                    class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950"></textarea>
+                @error('shippingAddress')
+                <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {{-- Country select --}}
                 <div>
-                    <label for="checkout-country" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Country</label>
-                    <select id="checkout-country" wire:model.live="shippingCountryId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                    <label for="checkout-country"
+                        class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Country</label>
+                    <select id="checkout-country" wire:model.live="shippingCountryId"
+                        class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                         <option value="">— Select country —</option>
                         @foreach ($this->countries as $country)
                             <option value="{{ $country->id }}">{{ $country->name }}</option>
                         @endforeach
                     </select>
-                    @error('shippingCountryId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    @error('shippingCountryId')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
 
                 {{-- State / province: select if country has states, otherwise text input --}}
                 <div>
-                    <label for="checkout-state" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">State / province</label>
+                    <label for="checkout-state"
+                        class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">State / province</label>
                     @if ($shippingCountryId !== '' && $this->states->isNotEmpty())
-                        <select id="checkout-state" wire:model.live="shippingStateId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                        <select id="checkout-state" wire:model.live="shippingStateId"
+                            class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                             <option value="">— Select state —</option>
                             @foreach ($this->states as $state)
                                 <option value="{{ $state->id }}">{{ $state->name }}</option>
                             @endforeach
                         </select>
-                        @error('shippingStateId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        @error('shippingStateId')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     @else
-                        <input id="checkout-state" type="text" wire:model="shippingStateText" autocomplete="address-level1" placeholder="{{ $shippingCountryId === '' ? 'Select a country first' : 'Type state / province' }}" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950" @disabled($shippingCountryId === '')>
-                        @error('shippingStateText') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        <input id="checkout-state" type="text" wire:model="shippingStateText" autocomplete="address-level1"
+                            placeholder="{{ $shippingCountryId === '' ? 'Select a country first' : 'Type state / province' }}"
+                            class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950"
+                            @disabled($shippingCountryId === '')>
+                        @error('shippingStateText')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     @endif
                 </div>
 
                 {{-- City: select if state has cities, otherwise text input --}}
                 <div>
-                    <label for="checkout-city" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">City</label>
+                    <label for="checkout-city"
+                        class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">City</label>
                     @if ($shippingStateId !== '' && $this->cities->isNotEmpty())
-                        <select id="checkout-city" wire:model.live="shippingCityId" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                        <select id="checkout-city" wire:model.live="shippingCityId"
+                            class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                             <option value="">— Select city —</option>
                             @foreach ($this->cities as $city)
                                 <option value="{{ $city->id }}">{{ $city->name }}</option>
                             @endforeach
                         </select>
-                        @error('shippingCityId') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        @error('shippingCityId')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     @else
                         @php
                             $cityDisabled = $shippingCountryId === '' || ($this->states->isNotEmpty() && $shippingStateId === '');
                             $cityPlaceholder = $shippingCountryId === '' ? 'Select a country first' : ($this->states->isNotEmpty() && $shippingStateId === '' ? 'Select a state first' : 'Type city');
                         @endphp
-                        <input id="checkout-city" type="text" wire:model="shippingCityText" autocomplete="address-level2" placeholder="{{ $cityPlaceholder }}" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950" @disabled($cityDisabled)>
-                        @error('shippingCityText') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                        <input id="checkout-city" type="text" wire:model="shippingCityText" autocomplete="address-level2"
+                            placeholder="{{ $cityPlaceholder }}"
+                            class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950"
+                            @disabled($cityDisabled)>
+                        @error('shippingCityText')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                     @endif
                 </div>
 
                 <div>
-                    <label for="checkout-postal" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Postal code</label>
-                    <input id="checkout-postal" type="text" wire:model="shippingPostalCode" autocomplete="postal-code" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                    @error('shippingPostalCode') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    <label for="checkout-postal"
+                        class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Postal code</label>
+                    <input id="checkout-postal" type="text" wire:model="shippingPostalCode" autocomplete="postal-code"
+                        class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                    @error('shippingPostalCode')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2">
-                    <label for="checkout-phone" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Delivery phone</label>
-                    <input id="checkout-phone" type="tel" wire:model="shippingPhone" autocomplete="tel" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                    @error('shippingPhone') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                    <label for="checkout-phone"
+                        class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Delivery phone</label>
+                    <input id="checkout-phone" type="tel" wire:model="shippingPhone" autocomplete="tel"
+                        class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                    @error('shippingPhone')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                 </div>
             </div>
             <fieldset class="space-y-3">
                 <legend class="text-lg font-semibold text-gray-900 dark:text-gray-100">Payment method</legend>
                 @forelse ($paymentOptions as $method => $label)
-                    <label for="payment-{{ $method }}" class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 text-sm has-[:checked]:border-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:has-[:checked]:border-white">
-                        <input id="payment-{{ $method }}" type="radio" wire:model.live="paymentMethod" value="{{ $method }}" class="mt-1">
+                    <label for="payment-{{ $method }}"
+                        class="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 text-sm has-[:checked]:border-gray-900 dark:border-gray-800 dark:bg-gray-950 dark:has-[:checked]:border-white">
+                        <input id="payment-{{ $method }}" type="radio" wire:model.live="paymentMethod" value="{{ $method }}"
+                            class="mt-1">
                         <span class="min-w-0">
                             <span class="block font-semibold text-gray-800 dark:text-gray-100">{{ $label }}</span>
                             @if ($method === \App\Models\Payment::METHOD_CASH_ON_DELIVERY)
-                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay the courier when your order arrives.</span>
+                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay the courier when your order
+                                    arrives.</span>
                             @elseif ($method === \App\Models\Payment::METHOD_SELCOM)
-                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay instantly via Vodacom M-Pesa, Tigo Pesa, Airtel Money, Halopesa or Card.</span>
+                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Pay instantly via M-Pesa, Mixx by Yas,
+                                    Airtel Money, HaloPesa, or
+                                    T-Pesa{{ ($selcomAccount['payment_methods'] ?? 'MOBILEMONEY') === 'ALL' ? ' (plus SimBanking & Cards)' : '' }}.</span>
                             @else
-                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Send the money to the Lipa number below, then submit the transaction ID from your SMS.</span>
+                                <span class="mt-1 block text-gray-600 dark:text-gray-400">Send the money to the Lipa number
+                                    below, then submit the transaction ID from your SMS.</span>
                             @endif
                         </span>
                     </label>
                 @empty
-                    <p class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">No payment method is available right now. Please try again later.</p>
+                    <p
+                        class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                        No payment method is available right now. Please try again later.</p>
                 @endforelse
-                @error('paymentMethod') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+                @error('paymentMethod')
+                <p class="text-sm text-red-600">{{ $message }}</p> @enderror
             </fieldset>
 
             @if ($paymentMethod === \App\Models\Payment::METHOD_VODACOM_LIPA)
-                <div class="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+                <div
+                    class="space-y-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
                     <div class="flex flex-wrap items-baseline justify-between gap-2">
                         <p class="text-sm font-semibold text-amber-900 dark:text-amber-100">Vodacom Lipa number</p>
-                        <p class="font-mono text-2xl font-bold tracking-wider text-amber-900 dark:text-amber-100">{{ $lipaAccount['number'] !== '' ? $lipaAccount['number'] : 'Not configured' }}</p>
+                        <p class="font-mono text-2xl font-bold tracking-wider text-amber-900 dark:text-amber-100">
+                            {{ $lipaAccount['number'] !== '' ? $lipaAccount['number'] : 'Not configured' }}</p>
                     </div>
                     @if ($lipaAccount['business_name'] !== '')
-                        <p class="text-sm text-amber-900 dark:text-amber-100">Account name: <span class="font-semibold">{{ $lipaAccount['business_name'] }}</span></p>
+                        <p class="text-sm text-amber-900 dark:text-amber-100">Account name: <span
+                                class="font-semibold">{{ $lipaAccount['business_name'] }}</span></p>
                     @endif
-                    <p class="text-sm text-amber-900 dark:text-amber-100">Amount to send: <span class="font-semibold">{{ $currency }} {{ number_format($total, 2) }}</span></p>
+                    <p class="text-sm text-amber-900 dark:text-amber-100">Amount to send: <span
+                            class="font-semibold">{{ $currency }} {{ number_format($total, 2) }}</span></p>
                     @if (\App\Support\RichText::plainText($lipaAccount['instructions']) !== '')
-                        <div class="sf-rich-text sf-rich-text--compact text-sm text-amber-900/90 dark:text-amber-100/90">{!! \App\Support\RichText::toHtml($lipaAccount['instructions']) !!}</div>
+                        <div class="sf-rich-text sf-rich-text--compact text-sm text-amber-900/90 dark:text-amber-100/90">
+                            {!! \App\Support\RichText::toHtml($lipaAccount['instructions']) !!}</div>
                     @endif
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                            <label for="payment-phone" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">M-Pesa number used *</label>
-                            <input id="payment-phone" type="tel" wire:model="paymentPayerPhone" autocomplete="tel" placeholder="0754000000" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                            @error('paymentPayerPhone') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label for="payment-phone"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">M-Pesa number used
+                                *</label>
+                            <input id="payment-phone" type="tel" wire:model="paymentPayerPhone" autocomplete="tel"
+                                placeholder="0754000000"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            @error('paymentPayerPhone')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
-                            <label for="payment-reference" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Transaction ID *</label>
-                            <input id="payment-reference" type="text" wire:model="paymentReference" maxlength="100" placeholder="From your M-Pesa SMS" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                            @error('paymentReference') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            <label for="payment-reference"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Transaction ID
+                                *</label>
+                            <input id="payment-reference" type="text" wire:model="paymentReference" maxlength="100"
+                                placeholder="From your M-Pesa SMS"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            @error('paymentReference')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
-                    <p class="text-xs text-amber-900/80 dark:text-amber-100/80">Your order is reserved once the transaction ID is submitted. We verify it against the Lipa statement before dispatch.</p>
+                    <p class="text-xs text-amber-900/80 dark:text-amber-100/80">Your order is reserved once the transaction
+                        ID is submitted. We verify it against the Lipa statement before dispatch.</p>
                 </div>
             @elseif ($paymentMethod === \App\Models\Payment::METHOD_SELCOM)
-                <div class="space-y-4 rounded-lg border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/60">
+                <div
+                    class="space-y-4 rounded-lg border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900 dark:bg-blue-950/60">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <p class="text-sm font-semibold text-blue-950 dark:text-blue-100">Selcom Payment Gateway</p>
-                            <p class="text-xs text-blue-800 dark:text-blue-200">
-                                {{ $selcomAccount['mode'] === 'simulation' ? 'Local Simulation Mode (Testing)' : ($selcomAccount['mode'] === 'sandbox' ? 'Selcom Sandbox Environment' : 'Selcom Secure Live Gateway') }}
-                            </p>
+                            <p class="text-xs text-blue-800 dark:text-blue-200">Selcom Secure Live Gateway</p>
                         </div>
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-                            Instant Mobile & Card Payment
+                        <span
+                            class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            {{ ($selcomAccount['payment_methods'] ?? 'MOBILEMONEY') === 'ALL' ? 'Instant Mobile, Bank & Card Payment' : 'Instant Mobile Money Payment' }}
                         </span>
                     </div>
 
@@ -192,45 +262,65 @@
 
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div>
-                            <label for="selcom-network" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Mobile Network *</label>
-                            <select id="selcom-network" wire:model.live="selcomNetwork" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                            <label for="selcom-network"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Mobile Network
+                                *</label>
+                            <select id="selcom-network" wire:model.live="selcomNetwork"
+                                class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
                                 <option value="VODACOM">Vodacom M-Pesa</option>
                                 <option value="AIRTEL">Airtel Money</option>
-                                <option value="TIGO">Tigo Pesa</option>
-                                <option value="HALOPESA">Halopesa</option>
+                                <option value="YAS">Mixx by Yas</option>
+                                <option value="HALOPESA">HaloPesa</option>
+                                <option value="TPESA">T-Pesa (TTCL)</option>
                             </select>
-                            @error('selcomNetwork') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            @error('selcomNetwork')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                         <div class="sm:col-span-2">
-                            <label for="selcom-phone" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Payer Mobile Number *</label>
+                            <label for="selcom-phone"
+                                class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Payer Mobile Number
+                                *</label>
                             <div class="flex gap-2">
-                                <input id="selcom-phone" type="tel" wire:model="selcomPhone" autocomplete="tel" placeholder="0754000000" class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
-                                <button type="button" wire:click="lookupSelcomAccount" wire:loading.attr="disabled" class="shrink-0 rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100">
+                                <input id="selcom-phone" type="tel" wire:model="selcomPhone" autocomplete="tel"
+                                    placeholder="0755000000"
+                                    class="w-full rounded-lg border-gray-300 bg-white text-sm dark:border-gray-700 dark:bg-gray-950">
+                                <button type="button" wire:click="lookupSelcomAccount" wire:loading.attr="disabled"
+                                    class="shrink-0 rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:bg-blue-900 dark:text-blue-100">
                                     <span wire:loading.remove wire:target="lookupSelcomAccount">Verify Name</span>
                                     <span wire:loading wire:target="lookupSelcomAccount">Checking...</span>
                                 </button>
                             </div>
-                            @error('selcomPhone') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
+                            @error('selcomPhone')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
 
                     @if ($selcomLookupName)
-                        <div class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-2.5 text-xs text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-                            <svg class="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        <div
+                            class="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-2.5 text-xs text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+                            <svg class="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" fill="currentColor"
+                                viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
                             <span>Verified Account: <strong class="font-semibold">{{ $selcomLookupName }}</strong></span>
                         </div>
                     @elseif ($selcomLookupError)
-                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                        <div
+                            class="rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
                             {{ $selcomLookupError }}
                         </div>
                     @endif
 
                     <p class="text-xs text-blue-900/80 dark:text-blue-100/80">
-                        When you place this order, Selcom will prompt payment directly to your phone or provide a secure payment link.
+                        When you place this order, Selcom will prompt payment directly to your phone or provide a secure
+                        payment link.
                     </p>
                 </div>
             @endif
-            <button type="submit" wire:loading.attr="disabled" class="w-full rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
+            <button type="submit" wire:loading.attr="disabled"
+                class="w-full rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900">
                 Place order
             </button>
         </form>
@@ -239,24 +329,28 @@
     <aside class="h-fit space-y-4 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
         <div class="flex items-center justify-between gap-3">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Order summary</h2>
-            <a href="{{ route('cart') }}" wire:navigate class="text-sm font-medium text-blue-700 dark:text-blue-300">Edit cart</a>
+            <a href="{{ route('cart') }}" wire:navigate
+                class="text-sm font-medium text-blue-700 dark:text-blue-300">Edit cart</a>
         </div>
         @forelse ($cartItems as $cartItem)
-            @php($previewItem = $previewItems[$cartItem->id] ?? [])
-            <div wire:key="checkout-item-{{ $cartItem->id }}" class="flex justify-between gap-4 border-b border-gray-100 pb-3 text-sm dark:border-gray-800">
-                <div class="min-w-0">
-                    <p class="font-medium text-gray-800 dark:text-gray-100">{{ $cartItem->product?->name ?? 'Unavailable product' }}</p>
-                    <p class="text-gray-500 dark:text-gray-400">Qty {{ $cartItem->quantity }}</p>
-                    @if ($previewItem['requiresSelection'] ?? false)
-                        <p class="text-amber-700 dark:text-amber-300">Choose a valid product option in your cart.</p>
-                    @endif
-                </div>
-                @unless ($previewItem['unavailable'] ?? false)
-                    <p class="whitespace-nowrap text-gray-700 dark:text-gray-200">{{ $currency }} {{ number_format($previewItem['lineTotal'] ?? 0, 2) }}</p>
-                @endunless
+        @php($previewItem = $previewItems[$cartItem->id] ?? [])
+        <div wire:key="checkout-item-{{ $cartItem->id }}"
+            class="flex justify-between gap-4 border-b border-gray-100 pb-3 text-sm dark:border-gray-800">
+            <div class="min-w-0">
+                <p class="font-medium text-gray-800 dark:text-gray-100">
+                    {{ $cartItem->product?->name ?? 'Unavailable product' }}</p>
+                <p class="text-gray-500 dark:text-gray-400">Qty {{ $cartItem->quantity }}</p>
+                @if ($previewItem['requiresSelection'] ?? false)
+                    <p class="text-amber-700 dark:text-amber-300">Choose a valid product option in your cart.</p>
+                @endif
             </div>
+            @unless ($previewItem['unavailable'] ?? false)
+                <p class="whitespace-nowrap text-gray-700 dark:text-gray-200">{{ $currency }}
+                    {{ number_format($previewItem['lineTotal'] ?? 0, 2) }}</p>
+            @endunless
+        </div>
         @empty
-            <p class="text-sm text-gray-500 dark:text-gray-400">Your cart is empty.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Your cart is empty.</p>
         @endforelse
         <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300">
             <span>Subtotal</span>
@@ -274,12 +368,14 @@
         </div>
         <div class="flex justify-between text-sm text-gray-600 dark:text-gray-300">
             <span>Delivery</span>
-            <span>{{ $shippingTotal > 0 ? $currency.' '.number_format($shippingTotal, 2) : 'Free' }}</span>
+            <span>{{ $shippingTotal > 0 ? $currency . ' ' . number_format($shippingTotal, 2) : 'Free' }}</span>
         </div>
-        <div class="flex justify-between border-t border-gray-200 pt-3 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">
+        <div
+            class="flex justify-between border-t border-gray-200 pt-3 font-semibold text-gray-900 dark:border-gray-700 dark:text-gray-100">
             <span>Total</span>
             <span>{{ $currency }} {{ number_format($total, 2) }}</span>
         </div>
-        <p class="text-xs text-gray-500 dark:text-gray-400">This is an estimate. Product prices, discounts, tax, and stock are verified again when you place the order.</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">This is an estimate. Product prices, discounts, tax, and
+            stock are verified again when you place the order.</p>
     </aside>
 </div>

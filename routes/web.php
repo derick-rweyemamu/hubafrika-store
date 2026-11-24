@@ -82,10 +82,6 @@ Route::post('/payments/selcom/callback', SelcomCallbackController::class)
     ->middleware('throttle:60,1')
     ->name('payments.selcom.callback');
 
-Route::post('/payments/selcom/simulate/{order}', [SelcomCallbackController::class, 'simulate'])
-    ->middleware(['web', 'auth'])
-    ->name('payments.selcom.simulate');
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

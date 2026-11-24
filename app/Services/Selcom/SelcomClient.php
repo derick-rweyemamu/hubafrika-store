@@ -9,36 +9,29 @@ use Illuminate\Support\Str;
 
 class SelcomClient
 {
-    public const SANDBOX_URL = 'https://apigwtest.selcommobile.com';
-
     public const PRODUCTION_URL = 'https://apigw.selcommobile.com';
 
     public function __construct(
         protected ?string $apiKey = null,
         protected ?string $apiSecret = null,
         protected ?string $vendorId = null,
-        protected ?string $mode = null,
+        protected ?string $paymentMethods = null,
     ) {
         $settings = Payment::settings();
         $this->apiKey = $apiKey ?? ($settings['selcom_api_key'] ?? '');
         $this->apiSecret = $apiSecret ?? ($settings['selcom_api_secret'] ?? '');
         $this->vendorId = $vendorId ?? ($settings['selcom_vendor_id'] ?? '');
-        $this->mode = $mode ?? ($settings['selcom_mode'] ?? 'sandbox');
+        $this->paymentMethods = $paymentMethods ?? ($settings['selcom_payment_methods'] ?? 'MOBILEMONEY');
     }
 
     public function baseUrl(): string
     {
-        return $this->mode === 'live' ? self::PRODUCTION_URL : self::SANDBOX_URL;
+        return self::PRODUCTION_URL;
     }
 
     public function isConfigured(): bool
     {
         return filled($this->apiKey) && filled($this->apiSecret) && filled($this->vendorId);
-    }
-
-    public function isSimulationMode(): bool
-    {
-        return $this->mode === 'simulation' || ! $this->isConfigured();
     }
 
     /**
@@ -81,8 +74,8 @@ class SelcomClient
         string $timestamp,
         string $signedFields
     ): bool {
-        if ($this->isSimulationMode()) {
-            return true;
+        if (! $this->isConfigured() || $receivedDigest === '' || $timestamp === '' || $signedFields === '') {
+            return false;
         }
 
         $fields = explode(',', $signedFields);
@@ -101,7 +94,7 @@ class SelcomClient
     }
 
     /**
-     * Name Lookup for mobile money wallet (M-Pesa, Tigo Pesa, Airtel Money, Halopesa).
+     * Name Lookup for mobile money wallet (M-Pesa, Mixx by Yas, Airtel Money, HaloPesa, T-Pesa).
      *
      * @return array{result: string, name: string, phone: string, network: string, message?: string}
      */
@@ -109,20 +102,13 @@ class SelcomClient
     {
         $normalizedPhone = $this->normalizePhone($phone);
 
-        if ($this->isSimulationMode()) {
-            $mockNames = [
-                'VODACOM' => 'AMINA BAKARI (VODACOM M-PESA)',
-                'AIRTEL' => 'JUMA KASSIM (AIRTEL MONEY)',
-                'TIGO' => 'BARAKA ELIUD (TIGO PESA)',
-                'HALOPESA' => 'NEEMA MWITA (HALOPESA)',
-            ];
-
+        if (! $this->isConfigured()) {
             return [
-                'result' => 'SUCCESS',
-                'name' => $mockNames[strtoupper($network)] ?? 'VERIFIED CUSTOMER ('.strtoupper($network).')',
+                'result' => 'FAIL',
+                'name' => '',
                 'phone' => $normalizedPhone,
                 'network' => strtoupper($network),
-                'message' => 'Simulated name lookup successful',
+                'message' => 'Selcom API credentials are not configured.',
             ];
         }
 
@@ -197,6 +183,14 @@ class SelcomClient
      */
     public function createOrderMinimal(array $params): array
     {
+        if (! $this->isConfigured()) {
+            return [
+                'result' => 'FAIL',
+                'resultcode' => '503',
+                'message' => 'Selcom API credentials are not configured.',
+            ];
+        }
+
         $payload = [
             'vendor' => (string) $this->vendorId,
             'order_id' => (string) $params['order_id'],
@@ -206,23 +200,11 @@ class SelcomClient
             'amount' => (int) round((float) $params['amount']),
             'currency' => $params['currency'] ?? 'TZS',
             'no_of_items' => (int) ($params['no_of_items'] ?? 1),
-            'payment_methods' => 'ALL',
+            'payment_methods' => $this->paymentMethods === 'ALL' ? 'ALL' : 'MOBILEMONEY',
             'redirect_url' => base64_encode($params['redirect_url']),
             'cancel_url' => base64_encode($params['cancel_url']),
             'webhook' => base64_encode($params['webhook']),
         ];
-
-        if ($this->isSimulationMode()) {
-            $mockRef = 'SELCOM-SIM-'.strtoupper(Str::random(10));
-
-            return [
-                'result' => 'SUCCESS',
-                'resultcode' => '000',
-                'message' => 'Simulated order created successfully',
-                'reference' => $mockRef,
-                'payment_gateway_url' => $params['redirect_url'].(str_contains($params['redirect_url'], '?') ? '&' : '?').'selcom_simulated=1&reference='.$mockRef,
-            ];
-        }
 
         try {
             $headers = $this->computeHeaders($payload);
@@ -274,12 +256,11 @@ class SelcomClient
      */
     public function queryOrderStatus(string $orderId): array
     {
-        if ($this->isSimulationMode()) {
+        if (! $this->isConfigured()) {
             return [
-                'result' => 'SUCCESS',
-                'resultcode' => '000',
-                'order_status' => 'COMPLETED',
-                'message' => 'Simulated order status: COMPLETED',
+                'result' => 'FAIL',
+                'resultcode' => '503',
+                'message' => 'Selcom API credentials are not configured.',
             ];
         }
 
